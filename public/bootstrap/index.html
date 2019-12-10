@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="../static-codding/img/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css">
+    <title>Bootstrap - Demo</title>
+    <style>
+      * {padding: 0; margin: 0; font: inherit; box-sizing: border-box;}
+      html, body {height: 100%;}
+      body {overflow: hidden;}
+
+      #app {display: flex; flex-direction: column; height: 100%;}
+      #app > .control {padding: 15px; text-align: center;}
+      #app > .auto-flex {flex: 1; position: relative;}
+      #app > .auto-flex iframe {width: 100%; height: 100%; position: absolute; left: 0; top: 0;}
+    </style>
+  </head>
+  <body>
+
+    <div id="app">
+      <div class="control">
+        <div class="btn-group">
+          <a href="./bootstrap/bootstrap-2.html" class="btn btn-default" target="targetFrame">Bootstrap-2</a>
+          <a href="./bootstrap/bootstrap-3.html" class="btn btn-primary" target="targetFrame">Bootstrap-3</a>
+          <a href="./bootstrap/bootstrap-4.html" class="btn btn-default" target="targetFrame">Bootstrap-4</a>
+        </div>
+      </div>
+      <div class="auto-flex">
+        <iframe src="./bootstrap/bootstrap-3.html" id="targetFrame" frameborder="0"></iframe>
+      </div>
+    </div>
+
+  </body>
+</html>
