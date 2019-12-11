@@ -144,6 +144,9 @@ export default {
     const searchText = me.searchText
     const signGetVideoList = vm.signGetVideoList = Math.random()
 
+    me.video.group = []
+    $('.video-group .list-item .inner').css({backgroundImage: ''})
+
     const finish = (listGroup) => {
       $('.video-group .list-item .inner').css({backgroundImage: ''})
       me.video.group = listGroup
