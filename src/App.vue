@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" :class="{ios: $root.is.ios, android: $root.is.android}">
     <div class="flex-v">
       <topbar></topbar>
       <div class="page-wrap-container auto-flex">
@@ -19,12 +19,43 @@
           </div>
         </transition>
       </div>
-      <div class="gray-title footer" v-if="0">
+      <div class="gray-title footer" v-if="!$root.setting.is.hideFooter">
         <div class="c">
           <span>鲁ICP备13010563号-2</span>
         </div>
       </div>
     </div>
+
+    <transition name="fade">
+      <div class="mask setting"
+        v-if="$root.setting.isShow"
+        @click="$root.setting.isShow = false"
+      >
+        <div class="inner" @click.stop>
+          <div class="gray-title">
+            <div class="fr">
+              <i class="glyphicon glyphicon-remove" @click="$root.setting.isShow = false"></i>
+            </div>
+            <div class="c ellipsis">设置</div>
+          </div>
+          <form class="space" @submit.prevent="$root.setting.isShow = false">
+            <table class="table-form">
+              <tr>
+                <td>隐藏 footer：</td>
+                <td>
+                  <toggle v-model="$root.setting.is.hideFooter"></toggle>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <input type="submit" value="确定" class="btn btn-success btn-block">
+                </td>
+              </tr>
+            </table>
+          </form>
+        </div>
+      </div>
+    </transition>
 
     <alert></alert>
     <confirm></confirm>

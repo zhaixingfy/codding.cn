@@ -14,6 +14,11 @@
         </li>
       </ul>
     </div>
+    <div class="ctrl-r">
+      <div class="ib p" @click="$root.setting.isShow = true">
+        <i class="glyphicon glyphicon-cog"></i>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -41,4 +46,6 @@ export default {
 #topbar .nav ul {margin-bottom: 0;}
 #topbar .nav ul li {display: inline-block; padding: 0 10px;}
 #topbar .nav ul li.on {color: #fff;}
+#topbar .ctrl-r {}
+#topbar .ctrl-r > .ib {padding: 0 10px;}
 </style>

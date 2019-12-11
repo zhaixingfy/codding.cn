@@ -148,10 +148,10 @@ export default {
       $('.video-group .list-item .inner').css({backgroundImage: ''})
       me.video.group = listGroup
       me.isIndex && (me.cache[me.tabCom] = listGroup)
-      const el = me.$refs.autoScroll
-      el && (el.scrollTop = 0)
       vm.is.loading = false
       vm.lazyLoad(1)
+      const el = me.$refs.autoScroll
+      el && (el.scrollTop = 0)
     }
 
     if (me.isIndex && me.cache[r.tabCom]) {
@@ -181,13 +181,7 @@ export default {
           // 加载央视首页
           switch (me.tabCom) {
             case '频道直播':
-              const colors = ['#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4', '#009688', '#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#795548', '#607D8B']
-
-              $.getJSON('./static-codding/data/liveChannel.json', (data) => {
-                data.forEach((item, idx, arr) => {
-                  item.img = vm.getImgOnCanvas(item.title, 300, 200, colors[idx % colors.length])
-                  item.hideText = true
-                })
+              $.getJSON('./static-codding/data/liveChannel.json?t=' + ~~(new Date().getMinutes() / 10), (data) => {
                 me.page.total = data.length || 0
                 next([{
                   title: '全部视频：共' + me.page.total + '条',
@@ -199,8 +193,11 @@ export default {
               next(await me.getVideoListByUrl('http://tv.cctv.com/'))
               break
             case '专题直播':
-              $.getJSON('./static-codding/data/liveHuya.json', (data) => {
+              $.getJSON('./static-codding/data/liveHuya.json?t=' + ~~(new Date().getMinutes() / 10), (data) => {
                 me.page.total = data.length || 0
+                data.forEach((item, idx, arr) => {
+                  item.site = 'https://www.huya.com/' + item.id
+                })
                 next([{
                   title: '全部直播：共' + me.page.total + '条',
                   list: data,

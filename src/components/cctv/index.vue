@@ -32,14 +32,14 @@
           </div>
           <div class="btn-box">
             <template v-if="videoInfo.m3u8">
-              <!-- <span class="btn btn-success btn-xs">
+              <span class="btn btn-success btn-xs" @click="playNext(-1)">
                 <i class="glyphicon glyphicon-arrow-left"></i>
               </span>
-              <span class="btn btn-success btn-xs">
+              <span class="btn btn-success btn-xs" @click="playNext(1)">
                 <i class="glyphicon glyphicon-arrow-right"></i>
-              </span> -->
-              <a target="_blank" :href="videoInfo.site || videoInfo.m3u8" class="btn btn-success btn-xs">官方播放</a>
-              <span class="btn btn-warning btn-xs"
+              </span>
+              <a tabindex="1" target="_blank" :href="videoInfo.site || videoInfo.m3u8" class="btn btn-success btn-xs">官方播放</a>
+              <span tabindex="1" class="btn btn-warning btn-xs"
                 @click="$root.updateRouter({videoInfo: undefined}, 'push')"
               >关闭视频</span>
             </template>
@@ -64,7 +64,7 @@
                 >
                 <div class="panel-sugg" v-if="sugg.list.length > 0">
                   <ul>
-                    <li
+                    <li tabindex="1" 
                       :class="['ellipsis', {on: idx === sugg.cur}]"
                       v-for="(item, idx) in sugg.list"
                       @click="sugg.text = item; handleSubmitAndFetchVideoList($event)"
@@ -73,20 +73,20 @@
                 </div>
               </div>
               <div class="input-group-btn">
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn btn-success" tabindex="1">
                   <i class="glyphicon glyphicon-search"></i>
                 </button>
               </div>
             </form>
             <div class="box-select">
-              <select :class="{select: !$root.is.ios}"
+              <select tabindex="1" :class="{select: !$root.is.ios}"
                 :value="r.playDirection"
                 @change="$root.updateRouter({playDirection: $event.target.value == 1 ? 1 : undefined})"
               >
                 <option :value="1">逆序播放</option>
                 <option :value="undefined">顺序播放</option>
               </select>
-              <select class="select"
+              <select tabindex="1" class="select"
                 v-if="pageNum > 1"
                 :value="curPage"
                 @change="$root.updateRouter({videoInfo: undefined, page: $event.target.value}, 'push')"
@@ -128,12 +128,22 @@
                   <li class="list-item"
                     v-for="(item, idx) in item.list"
                   >
-                    <div class="inner" tabindex="1" :lazy="item.img"
+                    <div class="inner" tabindex="1"
+                      :lazy="item.img"
                       @click="getM3u8(item)"
+                      v-if="tabCom !== '频道直播'"
                     >
-                      <div class="text-box" v-if="item.title && !item.hideText">
+                      <div class="text-box" v-if="item.title">
                         <div class="title line-2" v-if="item.title" :title="item.title">{{item.title}}</div>
                         <div class="desc line-2" v-if="item.desc" :title="item.desc">{{item.desc}}</div>
+                      </div>
+                    </div>
+                    <div class="inner" tabindex="1" v-else
+                      :style="{background: $root.color.list[idx % $root.color.list.length]}"
+                      @click="getM3u8(item)"
+                    >
+                      <div class="abs-text">
+                        <div>{{item.title}}</div>
                       </div>
                     </div>
                   </li>
@@ -257,6 +267,7 @@ export default {
       vm.updateRouter({
         searchText,
         page: undefined,
+        videoInfo: undefined,
       }, 'push')
       me.getVideoList()
     },
@@ -320,20 +331,21 @@ export default {
       const vm = me.$root
       const r = vm.router
       const videoList = [].concat.apply([], me.video.group.map(v => v.list))
-      const targetVideoSite = me.videoInfo.site
-      let targetIndex = -100
+      const targetVideoSite = me.videoInfo.m3u8
+      let targetIndex = -1
       let elItem
 
       me.$delete(vm.mapPlayTime, me.videoInfo.m3u8);
       
       for (let i = 0; i < videoList.length; i++) {
-        if (videoList[i].site === targetVideoSite) {
+        if (videoList[i].m3u8 === targetVideoSite) {
           targetIndex = i
           break
         }
       }
 
       targetIndex += (direction === undefined ? (r.playDirection ? -1 : 1) : direction)
+      console.log(targetIndex)
       elItem = videoList[targetIndex]
       elItem ? me.getM3u8(elItem) : vm.alert('当前页面没有可以播放的视频了')
     },
@@ -486,6 +498,13 @@ export default {
         select {margin-left: 5px;}
       }
       .auto-flex {overflow: visible;}
+    }
+    .list-respond {
+      .abs-text {
+        width: 100%; height: 100%; position: absolute; left: 0; top: 0;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 20px;
+      }
     }
   }
 }

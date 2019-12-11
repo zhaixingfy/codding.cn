@@ -6,4 +6,8 @@ try {
   
 }
 
+setting.isShow = setting.isShow || false
+setting.is = setting.is || {}
+setting.is.hideFooter = setting.is.hideFooter || false
+
 export default setting
