@@ -33,7 +33,4 @@ export default {
     if (!newVal) return
     vm.playM3u8(newVal)
   },
-  /*'is.loading'(newVal) {
-    console.warn(newVal)
-  }*/
 }

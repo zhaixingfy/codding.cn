@@ -13,7 +13,7 @@ export default function() {
       local: isLocal,
       supportM3u8: !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl'),
       supportHls: Hls.isSupported(),
-      ios: ua.indexOf('iPhone OS') > -1,
+      ios: ua.indexOf('iPhone OS') > -1 || ua.indexOf('iPad; CPU OS') > -1 || ua.indexOf('Macintosh;') > -1,
       android: ua.indexOf('Android') > -1,
     },
     dataAlert: {

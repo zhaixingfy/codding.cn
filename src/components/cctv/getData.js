@@ -1,24 +1,24 @@
 export default {
   async loadHuya() {
-    const me = this
-    const vm = me.$root
     let page = 0
     let result = []
     let isBreak = false
 
     while (!isBreak) {
       await new Promise((next) => {
+        //         https://www.huya.com/cache.php?m=LiveList&do=getLiveListByPage&gameId=2135&tagAll=0&page=2
         $.getJSON('https://www.huya.com/cache.php?m=LiveList&do=getLiveListByPage&gameId=2135&tagAll=0&page=' + (++page), (data) => {
           const list = data.data.datas
           console.log('load succ ', page)
           result = result.concat(list.map((v) => {
             return {
               id: v.profileRoom,
-              title: v.roomName.replace(/┊/g, '').trim(),
+              title: (v.roomName || v.introduction).replace(/┊/g, '').trim(),
               img: v.screenshot,
             }
           }))
           isBreak = list.length < 120
+          // console.log('def')
           next()
         })
       })

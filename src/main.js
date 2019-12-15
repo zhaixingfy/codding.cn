@@ -63,3 +63,9 @@ const removeAd = () => {
 
 $(removeAd)
 $(window).on('load', removeAd)
+
+
+if (!vm.is.local) {
+  window._hmt = window._hmt || []
+  $('<script src="https://hm.baidu.com/hm.js?e9c579f6c4c5e9613dfcffad76e61297"></script>').appendTo('body')
+}

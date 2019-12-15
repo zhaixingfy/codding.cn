@@ -144,18 +144,3 @@ Vue.component('toggle', {
     event: 'change',
   },
 })
-
-Vue.component('setting', {
-  template: `
-    <div class="mask setting">
-      <div class="inner">
-        <div class="gray-title">
-          <div class="fr">
-            <i class="glyphicon glyphicon-remove"></i>
-          </div>
-          <div class="c ellipsis">设置</div>
-        </div>
-      </div>
-    </div>
-  `
-})

@@ -15,3 +15,7 @@
 <img src="http://codding.cn/readme/index-6.jpg">
 
 <img src="http://codding.cn/readme/index-7.jpg">
+
+<!-- 
+-node_modules/*,-dist/*,-oxdproxy.js,-*.md,-.min.js,-video/*
+ -->

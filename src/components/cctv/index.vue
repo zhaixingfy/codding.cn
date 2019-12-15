@@ -32,12 +32,14 @@
           </div>
           <div class="btn-box">
             <template v-if="videoInfo.m3u8">
-              <span class="btn btn-success btn-xs" @click="playNext(-1)">
-                <i class="glyphicon glyphicon-arrow-left"></i>
-              </span>
-              <span class="btn btn-success btn-xs" @click="playNext(1)">
-                <i class="glyphicon glyphicon-arrow-right"></i>
-              </span>
+              <template v-if="!$root.setting.is.remoteControl">
+                <span class="btn btn-success btn-xs" @click="playNext(-1)">
+                  <i class="glyphicon glyphicon-arrow-left"></i>
+                </span>
+                <span class="btn btn-success btn-xs" @click="playNext(1)">
+                  <i class="glyphicon glyphicon-arrow-right"></i>
+                </span>
+              </template>
               <a tabindex="1" target="_blank" :href="videoInfo.site || videoInfo.m3u8" class="btn btn-success btn-xs">官方播放</a>
               <span tabindex="1" class="btn btn-warning btn-xs"
                 @click="$root.updateRouter({videoInfo: undefined}, 'push')"
@@ -50,7 +52,23 @@
           </div>
         </div>
         <div class="space wrap-ctrl" style="z-index: 2;">
-          <div class="flex-h">
+          <div class="flex" v-if="$root.setting.is.remoteControl">
+            <div class="auto-flex">
+              <button class="btn btn-primary btn-lg btn-block"
+                @click="playNext(-1)"
+              >
+                <i class="glyphicon glyphicon-arrow-left"></i>
+              </button>
+            </div>
+            <div class="auto-flex">
+              <button class="btn btn-primary btn-lg btn-block"
+                @click="playNext(1)"
+              >
+                <i class="glyphicon glyphicon-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+          <div class="flex-h" v-else>
             <form class="auto-flex inner input-group"
               @submit.prevent="handleSubmitAndFetchVideoList"
             >
@@ -80,11 +98,11 @@
             </form>
             <div class="box-select">
               <select tabindex="1" :class="{select: !$root.is.ios}"
-                :value="r.playDirection"
-                @change="$root.updateRouter({playDirection: $event.target.value == 1 ? 1 : undefined})"
+                :value="$root.setting.playDirection"
+                @change="$root.setting.playDirection = $event.target.value"
               >
                 <option :value="1">逆序播放</option>
-                <option :value="undefined">顺序播放</option>
+                <option :value="0">顺序播放</option>
               </select>
               <select tabindex="1" class="select"
                 v-if="pageNum > 1"
@@ -129,21 +147,21 @@
                     v-for="(item, idx) in item.list"
                   >
                     <div class="inner" tabindex="1"
+                      :style="{background: $root.color.list[idx % $root.color.list.length]}"
+                      @click="getM3u8(item)"
+                      v-if="isIndex && tabCom === '频道直播'"
+                    >
+                      <div class="abs-text">
+                        <div>{{item.title}}</div>
+                      </div>
+                    </div>
+                    <div class="inner" tabindex="1" v-else
                       :lazy="item.img"
                       @click="getM3u8(item)"
-                      v-if="tabCom !== '频道直播'"
                     >
                       <div class="text-box" v-if="item.title">
                         <div class="title line-2" v-if="item.title" :title="item.title">{{item.title}}</div>
                         <div class="desc line-2" v-if="item.desc" :title="item.desc">{{item.desc}}</div>
-                      </div>
-                    </div>
-                    <div class="inner" tabindex="1" v-else
-                      :style="{background: $root.color.list[idx % $root.color.list.length]}"
-                      @click="getM3u8(item)"
-                    >
-                      <div class="abs-text">
-                        <div>{{item.title}}</div>
                       </div>
                     </div>
                   </li>
@@ -331,27 +349,35 @@ export default {
       const vm = me.$root
       const r = vm.router
       const videoList = [].concat.apply([], me.video.group.map(v => v.list))
-      const targetVideoSite = me.videoInfo.m3u8
+      const targetVideoSite = me.videoInfo.m3u8 || me.videoInfo.site
       let targetIndex = -1
       let elItem
 
       me.$delete(vm.mapPlayTime, me.videoInfo.m3u8);
       
       for (let i = 0; i < videoList.length; i++) {
-        if (videoList[i].m3u8 === targetVideoSite) {
+        if ((videoList[i].m3u8 || videoList[i].site) === targetVideoSite) {
           targetIndex = i
           break
         }
       }
 
-      targetIndex += (direction === undefined ? (r.playDirection ? -1 : 1) : direction)
+      targetIndex += (direction === undefined ? (vm.setting.playDirection ? -1 : 1) : direction)
+      targetIndex < 0 && (targetIndex = videoList.length - 1)
+      targetIndex > videoList.length - 1 && (targetIndex = 0)
       console.log(targetIndex)
-      elItem = videoList[targetIndex]
-      elItem ? me.getM3u8(elItem) : vm.alert('当前页面没有可以播放的视频了')
+      me.getM3u8(videoList[targetIndex])
+      // elItem ? me.getM3u8(elItem) : vm.alert('当前页面没有可以播放的视频了')
     },
     async getM3u8(elItem) {
       const me = this
       const vm = me.$root
+
+      if (!vm.setting.is.playInSite) {
+        window.open(elItem.site)
+        vm.is.loading = false
+        return
+      }
 
       vm.is.loading = true
 

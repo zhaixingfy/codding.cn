@@ -18,6 +18,7 @@ a:not([class*="btn"]) {color: inherit; text-decoration: none;}
 
 select:focus,
 [tabindex]:focus {box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 6px #66afe9; outline: none;}
+.glyphicon {cursor: pointer;}
 
 #app:not(.ios) select {border: 1px solid #ccc; border-radius: 4px;}
 
@@ -59,6 +60,9 @@ select:focus,
 .list-respond .list-item .inner .text-box .desc {margin-top: 5px;}
 
 .auto-flex {flex: 1; overflow: auto;}
+
+.flex {display: flex; margin: 0 -6px;}
+.flex > * {flex: 1; padding: 0 6px;}
 
 .flex-h,
 .flex-v {display: flex;}
@@ -195,7 +199,8 @@ select:focus,
   & > .inner {
     min-width: 340px; min-height: 100px; max-width: 90%; max-height: 90%;
     overflow: hidden; border-radius: 4px; background: #fff;
-    .gray-title {
+    display: flex; flex-direction: column;
+    & > .gray-title {
       margin-bottom: 1px; user-select: none;
       padding: 0; text-align: center;
       & > .fl {padding: 0 10px; margin-right: 10px;}
@@ -203,8 +208,7 @@ select:focus,
       & > .ellipsis {margin: 0 40px;}
     }
     & > .auto-flex {
-      max-height: calc(100vh - 150px);
-      overflow: auto;
+      max-height: calc(100vh - 150px); overflow: auto; padding: 12px 12px 0 12px;
     }
   }
   .nav-tabs {

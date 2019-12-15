@@ -26,36 +26,7 @@
       </div>
     </div>
 
-    <transition name="fade">
-      <div class="mask setting"
-        v-if="$root.setting.isShow"
-        @click="$root.setting.isShow = false"
-      >
-        <div class="inner" @click.stop>
-          <div class="gray-title">
-            <div class="fr">
-              <i class="glyphicon glyphicon-remove" @click="$root.setting.isShow = false"></i>
-            </div>
-            <div class="c ellipsis">设置</div>
-          </div>
-          <form class="space" @submit.prevent="$root.setting.isShow = false">
-            <table class="table-form">
-              <tr>
-                <td>隐藏 footer：</td>
-                <td>
-                  <toggle v-model="$root.setting.is.hideFooter"></toggle>
-                </td>
-              </tr>
-              <tr>
-                <td colspan="2">
-                  <input type="submit" value="确定" class="btn btn-success btn-block">
-                </td>
-              </tr>
-            </table>
-          </form>
-        </div>
-      </div>
-    </transition>
+    <setting></setting>
 
     <alert></alert>
     <confirm></confirm>
@@ -68,9 +39,11 @@ export default {
   components: {
     'topbar': require('@/components/topbar').default,
     'cctv': require('@/components/cctv').default,
+    'web-ftp': require('@/components/web-ftp').default,
     'algo': require('@/components/algo').default,
     'creative': require('@/components/creative').default,
     'x-frame': require('@/components/x-frame').default,
+    'setting': require('@/components/setting').default,
   },
   mounted() {
     return {
