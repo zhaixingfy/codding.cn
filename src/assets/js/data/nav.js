@@ -1,6 +1,6 @@
 const list = [
-  {name: 'CCTV', com: 'cctv', arg: {}},
   {name: 'Algorithm', com: 'algo', arg: {}},
+  {name: 'CCTV', com: 'cctv', arg: {}},
   {name: 'WebFtp', com: 'web-ftp', arg: {}},
   {name: 'GitHub', com: 'x-frame', arg: {url: 'https://github.com/tianxiaohao1/codding.cn'}},
 ]

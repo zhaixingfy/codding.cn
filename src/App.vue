@@ -22,12 +22,12 @@
       <div class="gray-title footer" v-if="!$root.setting.is.hideFooter">
         <div class="c">
           <span>鲁ICP备13010563号-2</span>
+          <a target="_blank" href="https://www.bootcss.com/">Bootstrap@3.x</a>
         </div>
       </div>
     </div>
 
     <setting></setting>
-
     <alert></alert>
     <confirm></confirm>
   </div>
@@ -58,6 +58,7 @@ export default {
 #app > .flex-v {height: 100%;}
 #app .page-wrap-container {overflow: hidden;}
 #app .page-wrap-container > div {width: 100%; height: 100%; position: absolute; left: 0; top: 0; background: #fff;}
-#app .page-wrap-container > div > div {height: 100%; position: relative;}
+#app .page-wrap-container > div > div {height: 100%; position: relative; overflow: auto;}
 #app .footer {border-top: 1px solid #ddd; border-bottom: none; overflow: auto; white-space: nowrap; font-size: 12px;}
+#app .footer a {margin-left: 10px;}
 </style>

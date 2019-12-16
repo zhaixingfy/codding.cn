@@ -52,7 +52,7 @@ export default {
         const src = node.getAttribute('lazy')
         const img = new Image()
         img.src = src
-        node.removeAttribute('src')
+        node.removeAttribute('lazy')
         img.onload = () => {
           node.style.backgroundImage = 'url(' + src + ')'
         }
