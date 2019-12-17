@@ -478,7 +478,7 @@ export default {
     })*/
   },
   beforeDestroy() {
-
+    delete this.$root.cctv
   },
 }
 </script>

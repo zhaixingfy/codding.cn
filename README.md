@@ -19,3 +19,15 @@
 <!-- 
 -node_modules/*,-dist/*,-oxdproxy.js,-*.md,-.min.js,-video/*
  -->
+
+ ```js
+ return this.r.listDir || [{
+   path: 'c:/',
+   style: {
+     width: '600px',
+     height: '400px',
+     left: '10%',
+     top: '30px'
+   }
+ }]
+ ```

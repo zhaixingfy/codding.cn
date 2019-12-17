@@ -17,3 +17,11 @@ function err($code, $msg) {
   ));
   exit;
 }
+
+function toUTF8($str) {
+  return iconv('GBK', 'UTF-8', $str);
+}
+
+function toGBK($str) {
+  return iconv('UTF-8', 'GBK', $str);
+}

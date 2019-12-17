@@ -1,27 +1,34 @@
 <template>
-  <div class="web-ftp">
-    <div class="list-dir" @mousedown="handleMousedown">
+  <div class="web-ftp" ref="webFtp">
+    <div class="list-dir" @mousedown="handleMouseDown" ref="listDir">
       <section class="dir cur flex-v"
-        v-for="(item, idx) in listDir"
-        :style="item.style"
+        v-for="(itemDir, idx) in listDir"
+        :key="itemDir.style.zIndex"
+        :data-index="idx"
+        :style="itemDir.style"
       >
         <div class="gray-title dir-title flex-h">
-          <div class="auto-flex ellipsis">{{item.path}}</div>
+          <form class="auto-flex ellipsis">
+            <input class="form-control" type="text"
+              @keydown.enter.prevent="updatePath($event, itemDir)"
+              ondblclick="this.focus()"
+              :value="itemDir.path"
+            >
+          </form>
           <div class="icon-box">
-            <span>99</span>
+            <span>{{itemDir.countSelected || 0}} / {{(dir.map[itemDir.path] || []).length}}</span>
             <i class="glyphicon glyphicon-pencil"></i>
-            <i class="glyphicon glyphicon-remove"></i>
+            <i class="glyphicon glyphicon-remove" @click="listDir.splice(idx, 1)"></i>
           </div>
         </div>
         <div class="auto-flex dir-body">
           <ul>
             <li class="file"
-              v-for="(item, idx) in 200"
-              :draggable="idx < 10"
-              :is-dir="idx < 5 || idx > 45"
+              v-for="(item, idx) in dir.map[itemDir.path]"
+              :is-dir="item.isDir"
             >
               <div draggable="true" class="glyphicon glyphicon-file"></div>
-              <div draggable="true" class="name">file - {{idx}}</div>
+              <div draggable="true" class="name">{{item.name}} Lorem ipsum dolor sit amet, consectetur adipisicing elit. Repudiandae natus sequi officia accusantium ab tempore, aliquid quo, totam aut doloremque assumenda voluptate, quia consectetur necessitatibus et labore nihil? Ut, repellat.</div>
             </li>
           </ul>
         </div>
@@ -43,6 +50,38 @@
     </div>
 
     <div ref="elSelect" class="el-select"></div>
+
+    <transition name="fade">
+      <div class="mask mask-open-dir"
+        v-if="dir.open.isShow"
+        @click="dir.open.isShow = false"
+      >
+        <form class="inner" @click.stop
+          @submit.prevent="openDir(dir.open.path)"
+        >
+          <div class="gray-title">
+            <div class="fr">
+              <i class="glyphicon glyphicon-remove" @click="dir.open.isShow = false"></i>
+            </div>
+            <div class="c ellipsis">打开文件夹</div>
+          </div>
+          <div class="auto-flex">
+            <table class="table-form">
+              <tr>
+                <td>
+                  <input type="text" class="form-control" placeholder="输入路径" required 
+                    v-model="dir.open.path"
+                  >
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div class="space">
+            <input type="submit" value="确定" class="btn btn-success btn-block">
+          </div>
+        </form>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -51,7 +90,13 @@ export default {
   name: 'web-ftp',
   data() {
     return {
-
+      dir: {
+        map: {},
+        open: {
+          isShow: false,
+          path: '',
+        }
+      }
     }
   },
   computed: {
@@ -59,25 +104,81 @@ export default {
       return this.$root.router
     },
     listDir() {
-      return this.r.listDir || [{
-        path: 'c:/www/',
+      return (this.r.dir || {}).list || []
+    },
+    curDir() {
+      return this.dir.list[this.r.dir.curIndex]
+    },
+  },
+  watch: {
+    'dir.open.isShow' (newVal) {
+      if (!newVal) return
+      this.$nextTick(() => {
+        $('.mask-open-dir .form-control:eq(0)').focus()
+      })
+    },
+    async 'dir.map'(newVal) {
+      console.log('dir.map changed')
+      const paths = Object.keys(newVal)
+
+      for (let i = 0; i < paths.length; i++) {
+        await this.getFiles(paths[i])
+      }
+
+      console.log('加载完毕')
+    }
+  },
+  methods: {
+    getFiles(path) {
+      const me = this
+
+      if (me.dir.map[path]) {
+        return me.dir.map[path]
+      }
+
+      return new Promise((next) => {
+        $.getJSON(vm.apiPrefix + 'webFtp.php', {
+          a: 'getFiles',
+          path,
+        }, (data) => {
+          data.sort((a, b) => a.name.localeCompare(b.name)).sort((a, b) => b.isDir - a.isDir)
+          vm.$set(me.dir.map, path, data)
+          next(data)
+        })
+      })
+    },
+    async openDir(path) {
+      const me = this
+      const vm = me.$root
+      const r = vm.router
+
+      me.dir.open.isShow = false
+      vm.isRouterPush = true
+      vm.router.dir.list.push({
+        path,
+        countSelected: 0,
         style: {
           width: '400px',
           height: '400px',
-          left: '20%',
-          top: '30px'
+          left: '30px',
+          top: '30px',
+          zIndex: ++r.dir.zIndex
         }
-      }]
+      })
+      !me.dir.map[path] && me.$set(me.dir.map, path, null)
     },
-  },
-  methods: {
-    handleMousedown(e) {
+    updatePath(e, dir) {
+      dir.path = e.target.value
+    },
+    handleMouseDown(e) {
       const me = this
       const vm = me.$root
       const r = vm.router
       const target = e.target
+      let elDir = target.closest('.dir')
+      let dirIndex = Number(elDir.getAttribute('data-index'))
+      let dir = me.listDir[dirIndex]
       const scrollEl = target.closest('.web-ftp')
-      const dir = target.closest('.dir')
       const dirTitle = target.closest('.dir-title')
       const dirBody = target.closest('.dir-body')
       const elResize = target.closest('.resize')
@@ -85,12 +186,40 @@ export default {
 
       const x1 = e.clientX + scrollEl.scrollLeft
       const y1 = e.clientY + scrollEl.scrollTop
-      const originX = dir.offsetLeft
-      const originY = dir.offsetTop
-      const originW = dir.offsetWidth
-      const originH = dir.offsetHeight
+      const originX = elDir.offsetLeft
+      const originY = elDir.offsetTop
+      const originW = elDir.offsetWidth
+      const originH = elDir.offsetHeight
+
+      if (r.dir.curIndex !== dirIndex) {
+        vm.isRouterPush = true
+        dir.style.zIndex = ++r.dir.zIndex
+        r.dir.curIndex = dirIndex
+        me.$nextTick(() => {
+          elDir = me.$refs.listDir.children[dirIndex]
+          elDir.style.transition = 'none'
+        })
+      }
+
+      elDir.style.transition = 'none'
 
       if (dirTitle) {
+        if ($(target).is(':focus')) return
+
+        e.preventDefault()
+
+        if (e.altKey) {
+          dir = clone(dir)
+          vm.isRouterPush = true
+          r.dir.curIndex = ++dirIndex
+          dir.style.zIndex = ++r.dir.zIndex
+          me.listDir.splice(dirIndex, 0, dir)
+          me.$nextTick(() => {
+            elDir = me.$refs.listDir.children[dirIndex]
+            elDir.style.transition = 'none'
+          })
+        }
+
         document.onmousemove = (e) => {
           const x2 = e.clientX + scrollEl.scrollLeft
           const y2 = e.clientY + scrollEl.scrollTop
@@ -101,23 +230,17 @@ export default {
           x < 0 && (x = 0)
           y < 0 && (y = 0)
 
-          dir.style.left = x + 'px'
-          dir.style.top = y + 'px'
+          elDir.style.left = x + 'px'
+          elDir.style.top = y + 'px'
         }
         document.onmouseup = (e) => {
           document.onmousemove = document.onmouseup = null
+          vm.isRouterPush = true
+          dir.style.left = elDir.style.left
+          dir.style.top = elDir.style.top
+          $(me.$refs.listDir.children).css({transition: ''})
         }
       } else if (dirBody) {
-        if (target.closest('[draggable=true]')) {
-          if (target.draggable && !target.closest('li').draggable) {
-            Array.from(dirBody.getElementsByTagName('li')).forEach((li) => {
-              li.draggable = false
-            })
-            target.closest('.file').draggable = true
-          }
-          return
-        }
-
         const pos = dirBody.getBoundingClientRect()
         const x1 = e.clientX - pos.left + dirBody.scrollLeft
         const y1 = e.clientY - pos.top + dirBody.scrollTop
@@ -134,7 +257,17 @@ export default {
         })
         let timerScroll
 
-        e.preventDefault()
+        if (target.closest('[draggable=true]')) {
+          if (!target.closest('.file').draggable) {
+            lis.forEach((v) => {
+              v.li.draggable = false
+            })
+            target.closest('.file').draggable = true
+          }
+        }
+
+        document.activeElement.blur()
+
         $(elSelect).css({
           width: '0px',
           height: '0px',
@@ -196,42 +329,43 @@ export default {
 
           clearTimeout(timerScroll)
 
-          if (!(e.clientY < pos.top || e.clientY > pos.bottom)) {
-            return
+          if (e.clientY < pos.top || e.clientY > pos.bottom) {
+            dirBody.scrollTop += (e.clientY - (e.clientY < pos.top ? pos.top : pos.bottom)) / 3
+            timerScroll = setTimeout(() => {
+              fnMove(e)
+            }, 1000 / 60)
           }
-
-          const vy = e.clientY - (e.clientY < pos.top ? pos.top : pos.bottom)
-          dirBody.scrollTop += vy / 3
-          timerScroll = setTimeout(() => {
-            fnMove(e)
-          }, 1000 / 60)
         }
 
-        const fnUp = (e) => {
+        if (!target.closest('[draggable=true]')) {
+          e.preventDefault()
+          document.onmousemove = fnMove
+        }
+        document.onmouseup = (e) => {
           const x2 = e.clientX - pos.left + dirBody.scrollLeft
           const y2 = e.clientY - pos.top + dirBody.scrollTop
           
           document.onmousemove = document.onmouseup = null
           elSelect.style.display = 'none'
           clearTimeout(timerScroll)
-          console.log('fnUp')
 
           if (x1 === x2 && y1 === y2) {
             // 点击
             lis.forEach((v, idx, arr) => {
               v.li.draggable = false
             })
-            $(target).closest('li').each((idx, li) => {
+            $(target).closest('.file').each((idx, li) => {
               li.draggable = true
             })
           } else {
             // 选择
             console.log('选择')
           }
-        }
 
-        document.onmousemove = fnMove
-        document.onmouseup = fnUp
+          dir.countSelected = lis.reduce((total, v) => {
+            return total += (v.li.draggable ? 1 : 0)
+          }, 0)
+        }
       } else if (elResize) {
         document.onmousemove = (e) => {
           const sClass = target.className
@@ -239,65 +373,79 @@ export default {
           const y2 = e.clientY + scrollEl.scrollTop
           const isL = sClass.indexOf('l') > -1
           const isT = sClass.indexOf('t') > -1
+          const minSize = 300
 
           let w = (isL ? x1 - x2 : x2 - x1) + originW
           let h = (isT ? y1 - y2 : y2 - y1) + originH
           let l = x2 - x1 + originX
           let t = y2 - y1 + originY
 
-          if (w < 200) {
-            if (isL) {
-              l -= 200 - w
-            }
-            w = 200
+          if (l < 0) {
+            w += l
+            l = 0
           }
 
-          if (h < 200) {
-            if (isT) {
-              t -= 200 - h
-            }
-            h = 200
+          if (t < 0) {
+            h += t
+            t = 0
+          }
+
+          if (w < minSize) {
+            if (isL) l -= minSize - w
+            w = minSize
+          }
+
+          if (h < minSize) {
+            if (isT) t -= minSize - h
+            h = minSize
           }
 
           switch (sClass) {
             case 'l':
-              dir.style.width = w + 'px'
-              dir.style.left = l + 'px'
+              elDir.style.width = w + 'px'
+              elDir.style.left = l + 'px'
               break
             case 't':
-              dir.style.height = h + 'px'
-              dir.style.top = t + 'px'
+              elDir.style.height = h + 'px'
+              elDir.style.top = t + 'px'
               break
             case 'r':
-              dir.style.width = w + 'px'
+              elDir.style.width = w + 'px'
               break
             case 'b':
-              dir.style.height = h + 'px'
+              elDir.style.height = h + 'px'
               break
             case 'lt':
-              dir.style.width = w + 'px'
-              dir.style.left = l + 'px'
-              dir.style.height = h + 'px'
-              dir.style.top = t + 'px'
+              elDir.style.width = w + 'px'
+              elDir.style.left = l + 'px'
+              elDir.style.height = h + 'px'
+              elDir.style.top = t + 'px'
               break
             case 'rt':
-              dir.style.width = w + 'px'
-              dir.style.height = h + 'px'
-              dir.style.top = t + 'px'
+              elDir.style.width = w + 'px'
+              elDir.style.height = h + 'px'
+              elDir.style.top = t + 'px'
               break
             case 'rb':
-              dir.style.width = w + 'px'
-              dir.style.height = h + 'px'
+              elDir.style.width = w + 'px'
+              elDir.style.height = h + 'px'
               break
             case 'lb':
-              dir.style.width = w + 'px'
-              dir.style.left = l + 'px'
-              dir.style.height = h + 'px'
+              elDir.style.width = w + 'px'
+              elDir.style.left = l + 'px'
+              elDir.style.height = h + 'px'
               break
           }
         }
         document.onmouseup = (e) => {
           document.onmousemove = document.onmouseup = null
+          vm.isRouterPush = true
+          elDir.style.transition = ''
+          dir.style.left = elDir.style.left
+          dir.style.top = elDir.style.top
+          dir.style.width = elDir.style.width
+          dir.style.height = elDir.style.height
+          dir.style.zIndex = elDir.style.zIndex
         }
       }
     }
@@ -306,10 +454,25 @@ export default {
     this.$root.webFtp = this
   },
   mounted() {
+    const me = this
+    const vm = me.$root
+    const r = clone(vm.router)
     console.clear()
+
+    r.dir = r.dir || {}
+    r.dir.curIndex = r.dir.curIndex || 0
+    r.dir.zIndex = r.dir.zIndex || 0
+    r.dir.list = r.dir.list || []
+    r.dir.zIndex = r.dir.list.length > 0 ? r.dir.list.map(v=>v.style.zIndex).max() : 1
+    r.dir.list.forEach((dir) => {
+      dir.countSelected = 0
+      me.$set(me.dir.map, dir.path, null)
+    })
+    vm.router = r
+    vm.webFtp = me
   },
   beforeDestroy() {
-    console.log('beforeDestroy')
+    delete this.$root.webFtp
   },
 }
 </script>
@@ -322,9 +485,21 @@ export default {
     .dir {
       width: 400px; height: 400px; background: #fff; position: absolute; left: 20px; top: 20px;
       box-shadow: 0 0 10px rgba(0,0,0,.2); border-radius: 4px; overflow: hidden; margin-bottom: 50px;
+      transition: .3s all;
       .dir-title {
-        padding: 0 12px; cursor: move;
-        .auto-flex {overflow: hidden;}
+        padding: 0 12px 0 6px; cursor: move;
+        form {
+          overflow: hidden; overflow: visible; padding-top: 5px;
+          .form-control {
+            -webkit-appearance: none; transition: .3s all;
+            border: 1px solid transparent; background: transparent;
+            box-shadow: none; cursor: inherit;
+            padding: 0 0 0 6px; height: 22px;
+          }
+          .form-control:focus {
+            border-color: #ddd; background: #fff; cursor: text;
+          }
+        }
         .icon-box {
           & > * {
             margin-left: 10px; cursor: pointer;
@@ -337,15 +512,16 @@ export default {
           &:after {content: ""; display: block; clear: both;}
           li {
             width: 60px; height: 80px; margin: 4px 0 0 4px;
-            position: relative;
-            float: left;
-            padding-top: 8px; border: 1px solid transparent;
+            position: relative; float: left;
+            padding-top: 6px; border: 1px solid transparent;
+            &:hover {background: rgb(229,243,255);}
+            &:active {background: rgb(216,234,255);}
             &[is-dir="true"] .glyphicon:before {content: "\e117"; color: #fc1;}
             &[draggable="true"] {border-color: #ddd; background: #f3f6f9}
             .glyphicon {font-size: 30px;}
             .name {
               position: absolute; left: 0; top: calc(80px - 34px);
-              width: 100%; line-height: 1.4em; padding: 0 5px;
+              width: 100%; line-height: 1.4em; padding: 0 2px;
               overflow: hidden; text-overflow: ellipsis;
               display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
             }

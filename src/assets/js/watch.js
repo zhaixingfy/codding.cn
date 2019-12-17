@@ -4,11 +4,6 @@ export default {
     handler(newVal, oldVal) {
       const vm = this.$root
 
-      if (JSON.stringify(newVal) === JSON.stringify(oldVal)) {
-        // console.log('路由没有发生变化')
-        return
-      }
-
       let hashData = JSON.stringify(newVal)
       ;(!vm.is.local && !localStorage.showRouterRaw) && (hashData = encodeURIComponent(hashData))
       const targetUrl = location.origin + location.pathname + location.search + '#' + hashData

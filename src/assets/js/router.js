@@ -17,9 +17,9 @@ export default {
     const vm = this.$root
 
     vm.isRouterPush = isRouterPush
-    vm.router = {
-      ...vm.router,
-      ...o,
+
+    for (let key in o) {
+      vm.$set(vm.router, key, o[key])
     }
     
     setTimeout(_ => vm.isRouterPush = false, 1)
