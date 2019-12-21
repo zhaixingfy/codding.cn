@@ -22,7 +22,7 @@
       <div class="gray-title footer" v-if="!$root.setting.is.hideFooter">
         <div class="c">
           <span>鲁ICP备13010563号-2</span>
-          <a target="_blank" href="https://www.bootcss.com/">Bootstrap@3.x</a>
+          <!-- <a target="_blank" href="https://www.bootcss.com/">Bootstrap@3.x</a> -->
         </div>
       </div>
     </div>

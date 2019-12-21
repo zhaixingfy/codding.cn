@@ -1,34 +1,47 @@
 <template>
-  <div class="web-ftp" ref="webFtp">
-    <div class="list-dir" @mousedown="handleMouseDown" ref="listDir">
-      <section class="dir cur flex-v"
+  <div class="web-ftp" ref="webFtp"
+    @dragstart="handleDragStart"
+    @dragover="handleDragover"
+    @drop="handleDrop"
+  >
+    <div class="list-dir"
+      @mousedown="handleMouseDown"
+      @dblclick="deligateDBlClick"
+      ref="listDir"
+    >
+      <section
         v-for="(itemDir, idx) in listDir"
-        :key="itemDir.style.zIndex"
-        :data-index="idx"
+        :class="['dir', {cur: idx === r.dir.curIndex}, 'flex-v']"
+        :dir-index="idx"
         :style="itemDir.style"
+        :key="itemDir.t"
       >
         <div class="gray-title dir-title flex-h">
           <form class="auto-flex ellipsis">
             <input class="form-control" type="text"
-              @keydown.enter.prevent="updatePath($event, itemDir)"
+              @keydown.enter.prevent="updatePath($event.target.value, itemDir)"
               ondblclick="this.focus()"
               :value="itemDir.path"
             >
           </form>
           <div class="icon-box">
-            <span>{{itemDir.countSelected || 0}} / {{(dir.map[itemDir.path] || []).length}}</span>
+            <span>{{itemDir.countSelected || 0}} / {{(dir.map[itemDir.path] || []).length || 0}}</span>
             <i class="glyphicon glyphicon-pencil"></i>
             <i class="glyphicon glyphicon-remove" @click="listDir.splice(idx, 1)"></i>
           </div>
         </div>
         <div class="auto-flex dir-body">
-          <ul>
+          <div class="space" v-if="(dir.map[itemDir.path] || {}).code">
+            <div class="alert alert-danger">{{dir.map[itemDir.path].msg}}</div>
+          </div>
+          <ul v-else>
             <li class="file"
               v-for="(item, idx) in dir.map[itemDir.path]"
+              :data-index="idx"
               :is-dir="item.isDir"
             >
               <div draggable="true" class="glyphicon glyphicon-file"></div>
-              <div draggable="true" class="name">{{item.name}} Lorem ipsum dolor sit amet, consectetur adipisicing elit. Repudiandae natus sequi officia accusantium ab tempore, aliquid quo, totam aut doloremque assumenda voluptate, quia consectetur necessitatibus et labore nihil? Ut, repellat.</div>
+              <div draggable="true" class="name" :title="item.name">{{item.name}}</div>
             </li>
           </ul>
         </div>
@@ -103,14 +116,23 @@ export default {
     r() {
       return this.$root.router
     },
+    rDir() {
+      return this.r.dir || {}
+    },
     listDir() {
-      return (this.r.dir || {}).list || []
+      return this.rDir.list || []
     },
     curDir() {
-      return this.dir.list[this.r.dir.curIndex]
+      return this.listDir[this.rDir.curIndex]
     },
   },
   watch: {
+    'r.dir.list'(newVal) {
+      const me = this
+      newVal.forEach((v) => {
+        !me.dir.map[v.path] && me.$set(me.dir.map, v.path, null)
+      })
+    },
     'dir.open.isShow' (newVal) {
       if (!newVal) return
       this.$nextTick(() => {
@@ -118,17 +140,27 @@ export default {
       })
     },
     async 'dir.map'(newVal) {
-      console.log('dir.map changed')
       const paths = Object.keys(newVal)
 
       for (let i = 0; i < paths.length; i++) {
         await this.getFiles(paths[i])
       }
-
-      console.log('加载完毕')
     }
   },
   methods: {
+    ...require('./draggable.js').default,
+    ...require('./handleMouseDown.js').default,
+    deligateDBlClick(e) {
+      const me = this
+      const vm = me.$root
+      const elDir = e.target.closest('.dir')
+      const elFile = $(e.target.closest('.file'))
+      const dirIndex = $(elDir).attr('dir-index')
+
+      if (elFile.attr('is-dir')) {
+        me.updatePath(me.curDir.path + $(elFile).find('.name').html(), me.listDir[dirIndex])
+      }
+    },
     getFiles(path) {
       const me = this
 
@@ -136,14 +168,38 @@ export default {
         return me.dir.map[path]
       }
 
+      vm.$set(me.dir.map, path, [])
+
       return new Promise((next) => {
         $.getJSON(vm.apiPrefix + 'webFtp.php', {
           a: 'getFiles',
           path,
         }, (data) => {
-          data.sort((a, b) => a.name.localeCompare(b.name)).sort((a, b) => b.isDir - a.isDir)
+          if (vm.isArray(data)) {
+            const jsonGroup = {
+              dir: [],
+              img: [],
+              other: [],
+            }
+            data.sort((a, b) => a.name.localeCompare(b.name))
+            data.forEach((v, idx, arr) => {
+              if (v.isDir) {
+                jsonGroup.dir.push(v)
+              } else if (/\.(jpg|jpeg|png|gif|ico|webp|bmp|svg)$/.test(v.name.toLowerCase())) {
+                jsonGroup.img.push(v)
+              } else {
+                jsonGroup.other.push(v)
+              }
+            })
+            data = [].concat.apply([], Object.keys(jsonGroup).map(k => jsonGroup[k]))
+          }
           vm.$set(me.dir.map, path, data)
           next(data)
+        }).catch((e) => {
+          vm.$set(me.dir.map, path, {
+            code: 1,
+            msg: navigator.onLine ? '服务器似乎未启动' : '请保持网络畅通',
+          })
         })
       })
     },
@@ -152,303 +208,32 @@ export default {
       const vm = me.$root
       const r = vm.router
 
+      path = vm.pathFormat(path)
+      r.dir.zIndex++
       me.dir.open.isShow = false
       vm.isRouterPush = true
       vm.router.dir.list.push({
         path,
+        t: r.dir.zIndex,
         countSelected: 0,
         style: {
           width: '400px',
           height: '400px',
           left: '30px',
           top: '30px',
-          zIndex: ++r.dir.zIndex
+          zIndex: r.dir.zIndex,
         }
       })
       !me.dir.map[path] && me.$set(me.dir.map, path, null)
     },
-    updatePath(e, dir) {
-      dir.path = e.target.value
-    },
-    handleMouseDown(e) {
+    updatePath(path, dir) {
       const me = this
       const vm = me.$root
-      const r = vm.router
-      const target = e.target
-      let elDir = target.closest('.dir')
-      let dirIndex = Number(elDir.getAttribute('data-index'))
-      let dir = me.listDir[dirIndex]
-      const scrollEl = target.closest('.web-ftp')
-      const dirTitle = target.closest('.dir-title')
-      const dirBody = target.closest('.dir-body')
-      const elResize = target.closest('.resize')
-      const elSelect = $(me.$refs.elSelect).appendTo(dirBody)[0]
-
-      const x1 = e.clientX + scrollEl.scrollLeft
-      const y1 = e.clientY + scrollEl.scrollTop
-      const originX = elDir.offsetLeft
-      const originY = elDir.offsetTop
-      const originW = elDir.offsetWidth
-      const originH = elDir.offsetHeight
-
-      if (r.dir.curIndex !== dirIndex) {
-        vm.isRouterPush = true
-        dir.style.zIndex = ++r.dir.zIndex
-        r.dir.curIndex = dirIndex
-        me.$nextTick(() => {
-          elDir = me.$refs.listDir.children[dirIndex]
-          elDir.style.transition = 'none'
-        })
-      }
-
-      elDir.style.transition = 'none'
-
-      if (dirTitle) {
-        if ($(target).is(':focus')) return
-
-        e.preventDefault()
-
-        if (e.altKey) {
-          dir = clone(dir)
-          vm.isRouterPush = true
-          r.dir.curIndex = ++dirIndex
-          dir.style.zIndex = ++r.dir.zIndex
-          me.listDir.splice(dirIndex, 0, dir)
-          me.$nextTick(() => {
-            elDir = me.$refs.listDir.children[dirIndex]
-            elDir.style.transition = 'none'
-          })
-        }
-
-        document.onmousemove = (e) => {
-          const x2 = e.clientX + scrollEl.scrollLeft
-          const y2 = e.clientY + scrollEl.scrollTop
-
-          let x = x2 - x1 + originX
-          let y = y2 - y1 + originY
-
-          x < 0 && (x = 0)
-          y < 0 && (y = 0)
-
-          elDir.style.left = x + 'px'
-          elDir.style.top = y + 'px'
-        }
-        document.onmouseup = (e) => {
-          document.onmousemove = document.onmouseup = null
-          vm.isRouterPush = true
-          dir.style.left = elDir.style.left
-          dir.style.top = elDir.style.top
-          $(me.$refs.listDir.children).css({transition: ''})
-        }
-      } else if (dirBody) {
-        const pos = dirBody.getBoundingClientRect()
-        const x1 = e.clientX - pos.left + dirBody.scrollLeft
-        const y1 = e.clientY - pos.top + dirBody.scrollTop
-        const lis = Array.from(dirBody.getElementsByTagName('li')).map((li) => {
-          return {
-            li,
-            l: li.offsetLeft,
-            t: li.offsetTop,
-            r: li.offsetLeft + li.offsetWidth,
-            b: li.offsetTop + li.offsetHeight,
-            signCtrl: e.ctrlKey && li.draggable,
-            signShift: e.shiftKey && li.draggable,
-          }
-        })
-        let timerScroll
-
-        if (target.closest('[draggable=true]')) {
-          if (!target.closest('.file').draggable) {
-            lis.forEach((v) => {
-              v.li.draggable = false
-            })
-            target.closest('.file').draggable = true
-          }
-        }
-
-        document.activeElement.blur()
-
-        $(elSelect).css({
-          width: '0px',
-          height: '0px',
-          display: 'block'
-        })
-
-        const fnMove = (e) => {
-          const x2 = e.clientX - pos.left + dirBody.scrollLeft
-          const y2 = e.clientY - pos.top + dirBody.scrollTop
-          
-          let l = Math.min(x1, x2)
-          let t = Math.min(y1, y2)
-          let w = Math.abs(x2 - x1)
-          let h = Math.abs(y2 - y1)
-
-          if (l < 0) {
-            w += l
-            l = 0
-          }
-
-          if (t < 0) {
-            h += t
-            t = 0
-          }
-
-          if (l + w > dirBody.scrollWidth) {
-            w = dirBody.scrollWidth - l
-          }
-
-          if (t + h > dirBody.scrollHeight) {
-            h = dirBody.scrollHeight - t
-          }
-
-          elSelect.style.left = l + 'px'
-          elSelect.style.top = t + 'px'
-          elSelect.style.width = w + 'px'
-          elSelect.style.height = h + 'px'
-
-          const r = l + w
-          const b = t + h
-
-          lis.forEach((v) => {
-            const isColl = !(
-              l > v.r ||
-              t > v.b ||
-              r < v.l ||
-              b < v.t
-            )
-
-            if (e.ctrlKey) {
-              v.li.draggable = isColl ? !v.signCtrl : v.signCtrl
-            } else if (e.shiftKey) {
-              v.li.draggable = isColl || v.signShift
-              isColl && v.signShift && (delete v.signShift)
-            } else {
-              v.li.draggable = isColl
-            }
-          })
-
-          clearTimeout(timerScroll)
-
-          if (e.clientY < pos.top || e.clientY > pos.bottom) {
-            dirBody.scrollTop += (e.clientY - (e.clientY < pos.top ? pos.top : pos.bottom)) / 3
-            timerScroll = setTimeout(() => {
-              fnMove(e)
-            }, 1000 / 60)
-          }
-        }
-
-        if (!target.closest('[draggable=true]')) {
-          e.preventDefault()
-          document.onmousemove = fnMove
-        }
-        document.onmouseup = (e) => {
-          const x2 = e.clientX - pos.left + dirBody.scrollLeft
-          const y2 = e.clientY - pos.top + dirBody.scrollTop
-          
-          document.onmousemove = document.onmouseup = null
-          elSelect.style.display = 'none'
-          clearTimeout(timerScroll)
-
-          if (x1 === x2 && y1 === y2) {
-            // 点击
-            lis.forEach((v, idx, arr) => {
-              v.li.draggable = false
-            })
-            $(target).closest('.file').each((idx, li) => {
-              li.draggable = true
-            })
-          } else {
-            // 选择
-            console.log('选择')
-          }
-
-          dir.countSelected = lis.reduce((total, v) => {
-            return total += (v.li.draggable ? 1 : 0)
-          }, 0)
-        }
-      } else if (elResize) {
-        document.onmousemove = (e) => {
-          const sClass = target.className
-          const x2 = e.clientX + scrollEl.scrollLeft
-          const y2 = e.clientY + scrollEl.scrollTop
-          const isL = sClass.indexOf('l') > -1
-          const isT = sClass.indexOf('t') > -1
-          const minSize = 300
-
-          let w = (isL ? x1 - x2 : x2 - x1) + originW
-          let h = (isT ? y1 - y2 : y2 - y1) + originH
-          let l = x2 - x1 + originX
-          let t = y2 - y1 + originY
-
-          if (l < 0) {
-            w += l
-            l = 0
-          }
-
-          if (t < 0) {
-            h += t
-            t = 0
-          }
-
-          if (w < minSize) {
-            if (isL) l -= minSize - w
-            w = minSize
-          }
-
-          if (h < minSize) {
-            if (isT) t -= minSize - h
-            h = minSize
-          }
-
-          switch (sClass) {
-            case 'l':
-              elDir.style.width = w + 'px'
-              elDir.style.left = l + 'px'
-              break
-            case 't':
-              elDir.style.height = h + 'px'
-              elDir.style.top = t + 'px'
-              break
-            case 'r':
-              elDir.style.width = w + 'px'
-              break
-            case 'b':
-              elDir.style.height = h + 'px'
-              break
-            case 'lt':
-              elDir.style.width = w + 'px'
-              elDir.style.left = l + 'px'
-              elDir.style.height = h + 'px'
-              elDir.style.top = t + 'px'
-              break
-            case 'rt':
-              elDir.style.width = w + 'px'
-              elDir.style.height = h + 'px'
-              elDir.style.top = t + 'px'
-              break
-            case 'rb':
-              elDir.style.width = w + 'px'
-              elDir.style.height = h + 'px'
-              break
-            case 'lb':
-              elDir.style.width = w + 'px'
-              elDir.style.left = l + 'px'
-              elDir.style.height = h + 'px'
-              break
-          }
-        }
-        document.onmouseup = (e) => {
-          document.onmousemove = document.onmouseup = null
-          vm.isRouterPush = true
-          elDir.style.transition = ''
-          dir.style.left = elDir.style.left
-          dir.style.top = elDir.style.top
-          dir.style.width = elDir.style.width
-          dir.style.height = elDir.style.height
-          dir.style.zIndex = elDir.style.zIndex
-        }
-      }
-    }
+      $(':focus').blur()
+      vm.isRouterPush = true
+      dir.path = vm.pathFormat(path)
+      !me.dir.map[dir.path] && me.$set(me.dir.map, dir.path, null)
+    },
   },
   beforeCreate() {
     this.$root.webFtp = this
@@ -522,7 +307,7 @@ export default {
             .name {
               position: absolute; left: 0; top: calc(80px - 34px);
               width: 100%; line-height: 1.4em; padding: 0 2px;
-              overflow: hidden; text-overflow: ellipsis;
+              overflow: hidden; text-overflow: ellipsis; word-break: break-all;
               display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
             }
           }

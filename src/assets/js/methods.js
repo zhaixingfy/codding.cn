@@ -7,6 +7,7 @@ export default {
     .on('resize', vm.lazyLoad.bind(vm))
 
     $(document).on('keydown', (e) => {
+      const r = vm.router
       const sKey = vm.keyMap[e.keyCode]
 
       if (sKey === 'esc') {
@@ -41,7 +42,7 @@ export default {
           case 'f':
             if (vm.webFtp) {
               const w = vm.webFtp.$refs.webFtp.clientWidth - 10
-              const row = Math.ceil(w / 400)
+              const row = Math.ceil(w / 500)
               const listDir = vm.webFtp.listDir
               const size = Math.floor(w / row)
               let col = -1
@@ -56,17 +57,24 @@ export default {
                 dir.style.top = (col * size + 10) + 'px'
                 dir.style.width = (size - 10) + 'px'
                 dir.style.height = (size - 10) + 'px'
-                dir.style.transition = ''
               }
             }
             break
         }
       } else if (e.shiftKey && e.altKey) {
         switch (sKey) {
-
+          
         }
       } else if (e.ctrlKey) {
         switch (sKey) {
+          case 'a':
+            if (vm.webFtp) {
+              vm.webFtp.curDir.countSelected = $('.web-ftp .dir.cur .file').each((idx, li) => {
+                li.draggable = true
+              }).length
+              vm.webFtp.startIndex = 0
+            }
+            break
           case 'y':
             history.forward()
             break
@@ -80,16 +88,60 @@ export default {
         }
       } else if (e.altKey) {
         switch (sKey) {
+          case 'l':
+            if (vm.webFtp) {
+              $('.web-ftp .dir.cur .dir-title .form-control').each((idx, node) => {
+                node.focus()
+                node.select()
+              })
+            }
+            break
           case 'o':
             if (vm.webFtp) {
               vm.webFtp.dir.open.isShow = true
               vm.webFtp.dir.open.path = ''
             }
             break
+          case 'w':
+            if (vm.webFtp) {
+              vm.isRouterPush = true
+              r.dir.list.splice(r.dir.curIndex, 1)
+              if (r.dir.curIndex >= r.dir.list.length) {
+                r.dir.curIndex--
+              }
+            }
+            break
         }
       } else {
         switch (sKey) {
+          case 'enter':
+            if (vm.webFtp) {
+              const dir = vm.webFtp.listDir[r.dir.curIndex]
+              const elDir = vm.webFtp.$refs.listDir.children[r.dir.curIndex]
+              const elFiles = Array.from(document.querySelectorAll('.web-ftp .dir.cur .file[draggable=true][is-dir=true]'))
+              let l = elDir.offsetLeft
+              let t = elDir.offsetTop
 
+              vm.isRouterPush = true
+              vm.webFtp.listDir.splice(r.dir.curIndex, 1, ...elFiles.map((elFile, idx) => {
+                const path = vm.pathFormat(dir.path + $(elFile).find('.name').html())
+                r.dir.zIndex++
+                return {
+                  path,
+                  t: r.dir.zIndex,
+                  countSelected: 0,
+                  style: {
+                    width: elDir.style.width,
+                    height: elDir.style.height,
+                    left: elDir.offsetLeft + idx * 20 + 'px',
+                    top: elDir.offsetTop + idx * 20 + 'px',
+                    zIndex: r.dir.zIndex,
+                  }
+                }
+              }))
+              r.dir.curIndex += elFiles.length - 1
+            }
+            break
         }
       }
 
@@ -193,6 +245,32 @@ export default {
     return URL.createObjectURL(new Blob([bytesCode], {type : 'image/png'}))*/
   },
   pathFormat(path) {
-    return (path + '/').replace(/(\/|\\)+/g, '/')
+    return (path + '/').replace(/。/g, '.').replace(/、/g, '/').replace(/(\/|\\)+/g, '/')
+  },
+  getUid() {
+    return parseInt(Math.random().toString().replace('0.', '')).toString(32)
+  },
+  isArray(o) {
+    return o instanceof Array
+  },
+  isColl(elA, elB) {
+    if (elA === elB) return false
+
+    const l = elA.offsetLeft
+    const t = elA.offsetTop
+    const r = l + elA.offsetWidth
+    const b = t + elA.offsetHeight
+
+    const _l = elB.offsetLeft
+    const _t = elB.offsetTop
+    const _r = _l + elB.offsetWidth
+    const _b = _t + elB.offsetHeight
+
+    return !(
+      l > _r ||
+      t > _b ||
+      r < _l ||
+      b < _t
+    )
   },
 }

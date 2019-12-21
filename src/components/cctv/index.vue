@@ -149,7 +149,7 @@
                     <div class="inner" tabindex="1"
                       :style="{background: $root.color.list[idx % $root.color.list.length]}"
                       @click="getM3u8(item)"
-                      v-if="isIndex && tabCom === '频道直播'"
+                      v-if="r.idxChannel === undefined && isIndex && tabCom === '频道直播'"
                     >
                       <div class="abs-text">
                         <div>{{item.title}}</div>

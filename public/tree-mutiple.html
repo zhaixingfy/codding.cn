@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <title>oxd 图形展示</title>
+  <style>
+    * {padding: 0; margin: 0; font: inherit; box-sizing: border-box;}
+    html, body {height: 100%;}
+    body {overflow: hidden; font-size: 14px;}
+
+    #app {height: 100%;}
+    #app canvas {background: #000; width: 100%; height: 100%;}
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+const d2a = (deg) => {
+  return deg / 180 * Math.PI
+}
+
+class OXDBlock {
+  constructor(d) {
+    this.d = d
+
+    d.gd = d.canvas.getContext('2d')
+    d.conf = {
+      lineHeight: 100,
+      spaceBetween: 90,
+      rect: {
+        size: {
+          width: 8,
+          height: 8,
+        }
+      }
+    }
+    d.translate = {
+      x: 0,
+      y: 50,
+    }
+
+    d.mapId = {}
+    d.mapPid = {}
+    d.stair = []
+
+    d.data.forEach((node) => {
+      d.mapId[node.id] = node
+      d.mapPid[node.pid] = d.mapPid[node.pid] || []
+      d.mapPid[node.pid].push(node)
+    })
+    d.rootNode = d.mapPid[0][0]
+
+    this.setDepth()
+    this.initEvents()
+  }
+  append(node) {
+    const me = this
+    const d = me.d
+
+    d.data.push(node)
+    d.mapId[node.id] = node
+    d.mapPid[node.pid] = d.mapPid[node.pid] || []
+    node.index = d.mapPid[node.pid].length
+    d.mapPid[node.pid].push(node)
+    node.depth = ((d.mapId[node.pid] || {}).depth || -1) + 1
+    d.stair[node.depth] = d.stair[node.depth] || []
+    node.stairIndex = d.stair[node.depth].length
+    d.stair[node.depth].push(node)
+  }
+  setDepth() {
+    const me = this
+    const d = me.d
+
+    const setDepth = (node, depth, index) => {
+      if (!node) return
+      node.depth = depth
+      node.index = index
+      d.stair[depth] = d.stair[depth] || []
+      node.stairIndex = d.stair[depth].length
+      d.stair[depth].push(node)
+      me.getChildren(node).forEach((item, idx, arr) => {
+        setDepth(item, depth + 1, idx)
+      })
+    }
+    setDepth(d.rootNode, 0, 0)
+  }
+  getMaxDepth() {
+    const d = this.d
+    return d.data.length > 0 ? Math.max.apply([], d.data.map(v => v.depth)) : -1
+  }
+  getChildren(node) {
+    if (!node) return []
+    return this.d.mapPid[node.id] || []
+  }
+  getSiblings(node) {
+    const d = this.d
+    if (!node) return []
+    if (node === d.rootNode) return [node]
+    return this.getChildren(this.d.mapId[node.pid])
+  }
+  getMainIndexInSiblings(node) {
+    if (!node) return 0
+    const siblings = this.getSiblings(node)
+
+    for (let i = 0; i < siblings.length; i++) {
+      if (siblings[i].isMain) {
+        return i
+      }
+    }
+
+    return 0
+  }
+  initEvents() {
+    const me = this
+    const d = me.d
+    let isMouseDown = false
+    let x1 = 0
+    let y1 = 0
+    let originX = 0
+    let originY= 0
+
+    d.canvas.onmousedown = (e) => {
+      x1 = e.clientX
+      y1 = e.clientY
+
+      originX = d.translate.x
+      originY = d.translate.y
+      isMouseDown = true
+    }
+
+    d.canvas.onmousemove = (e) => {
+      const x2 = e.clientX
+      const y2 = e.clientY
+
+      if (isMouseDown) {
+        let x = x2 - x1 + originX
+        let y = y2 - y1 + originY
+
+        d.translate.x = x
+        d.translate.y = y
+        me.render(e)
+      } else {
+
+      }
+    }
+
+    d.canvas.onmouseup = (e) => {
+      isMouseDown = false
+      me.render(e)
+    }
+
+    me.handleWindowResize = () => {
+      d.canvas.width = d.canvas.offsetWidth
+      d.canvas.height = d.canvas.offsetHeight
+      d.cx = d.canvas.width / 2
+      d.cy = d.canvas.height / 2
+
+      me.setLayout()
+      me.render()
+    }
+    window.addEventListener('resize', me.handleWindowResize.bind(me), false)
+    me.handleWindowResize()
+  }
+  setLayout() {
+    const me = this
+    const d = me.d
+
+    const setLayout = (node) => {
+      if (!node) return
+
+      const children = me.getChildren(node)
+
+      children.forEach((item) => {
+        setLayout(item)
+      })
+
+      if (children.length > 0) {
+        node.x = (children[0].x + children[children.length - 1].x) / 2
+      } else {
+        node.x = d.iLeft
+        d.iLeft += d.conf.spaceBetween
+      }
+      node.y = node.depth * d.conf.lineHeight
+    }
+
+    d.iLeft = 0
+    setLayout(d.rootNode)
+
+    const layoutTranslate = (node, x = 0, y = 0) => {
+      node.x += x
+      node.y += y
+      me.getChildren(node).forEach((item) => {
+        layoutTranslate(item, x, y)
+      })
+    }
+
+    const updatePos = (node) => {
+      const children = me.getChildren(node)
+
+      children.forEach((item) => {
+        updatePos(item)
+      })
+
+      const nodeL = d.stair[node.depth][node.stairIndex - 1]
+
+      if (children.length > 0) {
+        node.x = (children[0].x + children[children.length - 1].x) / 2
+        if (nodeL) {
+          const dis = node.x - nodeL.x
+          if (dis < d.conf.spaceBetween) {
+            console.log(node.id, d.conf.spaceBetween - dis)
+            layoutTranslate(node, d.conf.spaceBetween - dis)
+          }
+        }
+        return
+      }
+
+      const step = []
+      let _node = node
+
+      while (_node && !_node.visited) {
+        _node.visited = true
+        const nodeL = d.stair[_node.depth][_node.stairIndex - 1]
+        step.push({
+          nodeL,
+          nodeR: _node,
+          dis: nodeL ? _node.x - nodeL.x - d.conf.spaceBetween : undefined,
+        })
+        _node = d.mapId[_node.pid]
+      }
+
+      const _step = step.map(v => v.dis).filter(v=>v!==undefined)
+      const translateX = _step.length > 0 ? Math.min.apply([], _step) : 0
+      step.forEach((v) => {
+        v.nodeR.x -= translateX
+      })
+    }
+    updatePos(d.rootNode)
+    d.data.forEach((v) => v.visited = false)
+    layoutTranslate(d.rootNode, d.cx - d.rootNode.x, 0)
+  }
+  render() {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+    const size = d.conf.rect.size
+
+    const renderLine = (node) => {
+      if (!node) return
+
+      const children = me.getChildren(node)
+
+      children.forEach((item, idx, arr) => {
+        renderLine(item)
+        const x1 = node.x
+        const y1 = node.y
+
+        const x4 = item.x
+        const y4 = item.y
+
+        const x2 = x1
+        const x3 = x4
+
+        const y2 = (y1 + y4) / 2
+        const y3 = (y1 + y4) / 2
+
+        gd.beginPath()
+        gd.lineTo(node.x, node.y)
+        // gd.lineTo(item.x, item.y)
+        gd.bezierCurveTo(
+          x2, y2,
+          x3, y3,
+          x4, y4,
+        )
+        gd.lineWidth = 2
+        gd.strokeStyle = (node.isMain && item.isMain) ? '#09f' : 'rgba(128,128,128,1)'
+        gd.stroke()
+      })
+    }
+
+    const renderNode = (node) => {
+      if (!node) return
+
+      const children = me.getChildren(node)
+
+      children.forEach((item, idx, arr) => {
+        renderNode(item)
+      })
+
+      gd.beginPath()
+      gd.rect(node.x - size.width / 2, node.y - size.height / 2, size.width, size.height)
+      gd.lineWidth = 2
+      gd.strokeStyle = 'rgba(128,128,128,1)'
+      gd.stroke()
+      gd.fillStyle = 'rgba(128,128,128,.5)'
+      gd.fill()
+
+      gd.save()
+      gd.translate(node.x, node.y)
+      // gd.rotate(d2a(30))
+      gd.beginPath()
+      gd.textAlign = 'center'
+      gd.textBaseline = 'middle'
+      gd.font = '12px Arial'
+      gd.fillStyle = '#fff'
+      gd.fillText('id:' + node.id + '  pid:' + node.pid, 0, 0)
+      gd.restore()
+    }
+
+    gd.beginPath()
+    gd.fillStyle = '#000'
+    gd.fillRect(0, 0, canvas.width, canvas.height)
+
+    gd.save()
+    gd.translate(d.translate.x, d.translate.y)
+    renderLine(d.rootNode)
+    renderNode(d.rootNode)
+    gd.restore()
+  }
+}
+
+const rand = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1))
+}
+
+const oxdBlock = new OXDBlock({
+  canvas: document.getElementById('canvas'),
+  data: Array(50).fill().map((_, idx) => {
+    return {
+      id: idx + 1,
+      pid: rand(0, idx),
+    }
+  })
+})
+var d = oxdBlock.d
+</script>
+
+</body>
+</html>
