@@ -124,49 +124,45 @@ class TreeView {
     const d = me.d
     const {canvas} = d
 
-    d.stair.forEach((arr, depth) => {
-      arr.forEach((node, idx) => {
-        node.x = idx * d.conf.spaceBetween
-        node.y = depth * d.conf.lineHeight
-      })
-    })
-
-    const updateLayout = (node) => {
+    const setLayout = (node) => {
       const children = me.getChildren(node)
       let nodeL = me.prev(node)
       let _node = node
 
-      children.forEach(updateLayout)
+      children.forEach(setLayout)
+      node.y = node.depth * d.conf.lineHeight
 
       if (children.length > 0) {
         node.x = (children[0].x + children[children.length - 1].x) / 2
+      } else {
+        node.x = nodeL ? nodeL.x + d.conf.spaceBetween : 0
       }
 
       if (nodeL && node.x - nodeL.x < d.conf.spaceBetween) {
         me.translate(node, nodeL.x - node.x + d.conf.spaceBetween)
       }
 
-      if (children.length > 0) {
-        while (nodeL && nodeL.pid === _node.pid) {
-          if (me.getChildren(nodeL).length > 0) {
-            const siblings = d.stair[node.depth]
-            const dis = node.x - nodeL.x
-            const len = node.hIndex - nodeL.hIndex
-            const per = dis / len
-            
-            for (let i = 1; i < len; i++) {
-              siblings[nodeL.hIndex + i].x = i * per + nodeL.x
-            }
-            break
+      if (children.length === 0) return
+
+      while (nodeL && nodeL.pid === _node.pid) {
+        if (me.getChildren(nodeL).length > 0) {
+          const siblings = d.stair[node.depth]
+          const dis = node.x - nodeL.x
+          const len = node.hIndex - nodeL.hIndex
+          const per = dis / len
+          
+          for (let i = 1; i < len; i++) {
+            siblings[nodeL.hIndex + i].x = i * per + nodeL.x
           }
-          nodeL.x = _node.x - d.conf.spaceBetween
-          _node = nodeL
-          nodeL = me.prev(nodeL)
+          break
         }
+        nodeL.x = _node.x - d.conf.spaceBetween
+        _node = nodeL
+        nodeL = me.prev(nodeL)
       }
     }
 
-    updateLayout(d.root)
+    setLayout(d.root)
 
     me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y - d.maxDepth * d.conf.lineHeight / 2)
   }
