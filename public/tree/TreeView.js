@@ -19,6 +19,16 @@ class TreeView {
 
         idRepeat[node.id] = idRepeat[node.id] || 0
         idRepeat[node.id]++
+        node.x = 0
+        node.y = 0
+        node.from = {
+          x: 0,
+          y: 0,
+        }
+        node.to = {
+          x: 0,
+          y: 0,
+        }
 
         if (idRepeat[node.id] > 1) {
           throw new Error('TreeView Error 数据异常 id 重复，重复id是：' + node.id)
@@ -77,6 +87,8 @@ class TreeView {
 
     me.setDepth()
     me.initEvents()
+    me.setLayout()
+    me.setPos(d.cx, d.cy)
   }
   getChildren(node) {
     return this.d.mapPid[(node || {}).id] || []
@@ -199,8 +211,7 @@ class TreeView {
           break
       }
     })
-    me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y - d.maxDepth * d.conf.lineHeight / 2)
-    // me.translate(d.root, d.conf.rect.size.width, d.conf.rect.size.height)
+    // me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y)
   }
   initEvents() {
     const me = this
@@ -243,7 +254,7 @@ class TreeView {
       me.render(e)
     }
 
-    me.handleWindowResize = () => {
+    me.handleWindowResize = (e) => {
       const w = canvas.parentNode.offsetWidth
       const h = canvas.parentNode.offsetHeight
 
@@ -258,8 +269,7 @@ class TreeView {
       d.cx = w / 2
       d.cy = h / 2
 
-      me.setLayout()
-      me.render()
+      e && me.render()
     }
 
     me.handleWindowResize()
@@ -340,20 +350,39 @@ class TreeView {
     renderNode(d.root)
     gd.restore()
   }
-  toggleFlip() {
+  setXY(node, x = 0, y = 0) {
+    const setXY = (node) => {
+      node.x = node.from.x = x
+      node.y = node.from.y = y
+      me.getChildren(node).forEach(setXY)
+    }
+    setXY(node)
+  }
+  setPos(x = 0, y = 0) {
     const me = this
     const d = me.d
 
+    me.translate(d.root, x - d.root.x, y - d.root.y)
+    me.render()
+  }
+  toggleFlip() {
+    const me = this
+    const d = me.d
+    const {x, y} = d.root
+
     d.usingFlip = !d.usingFlip
     me.setLayout()
+    me.setPos(x, y)
     me.render()
   }
   setDirection(direction) {
     const me = this
     const d = me.d
+    const {x, y} = d.root
 
     d.direction = direction
     me.setLayout()
+    me.setPos(x, y)
     me.render()
   }
   destroy() {
