@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <style>
+    * {padding: 0; margin: 0;}
+    html, body {height: 100%}
+    #app {height: 100%;}
+    #app canvas {width: 100%; height: 100%; vertical-align: top; background: #000;}
+    #range-box {position: absolute; right: 10px; top: 10px; background: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.3); padding: 10px; border-radius: 4px;}
+    #range-box * {vertical-align: middle;}
+    img {box-shadow: 0 0 10px #000; margin: 10px;}
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <canvas id="canvas"></canvas>
+  <div id="range-box">
+    <input type="range" id="range" min="1000" max="50000" step="1000" value="1000">
+    <span id="rangeValue">1000</span>
+  </div>
+</div>
+
+<script>
+const app = document.getElementById('app')
+const canvas = document.getElementById('canvas')
+const range = document.getElementById('range')
+const rangeValue = document.getElementById('rangeValue')
+const rand = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1) + min)
+}
+const randColor = (a) => {
+  const o = {
+    r: rand(0, 255),
+    g: rand(0, 255),
+    b: rand(0, 255),
+    a: a === undefined ? 1 : a,
+  }
+  o.toString = () => {
+    return 'rgba(' + o.r + ',' + o.g + ',' + o.b + ',' + o.a + ')'
+  }
+  return o
+}
+
+const d2a = (deg) => {
+  return deg / 180 * Math.PI
+}
+
+class Gly {
+  constructor(d = {}) {
+    this.d = d
+
+    d.gd = d.canvas.getContext('2d')
+    d.mapGly ={}
+    d.colors = Array(10).fill().map(() => {
+      return randColor().toString()
+    })
+    d.data = []
+    d.conf = {
+      r: 10,
+    }
+
+    this.presetImg()
+    this.setSize()
+  }
+  presetImg() {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+    const r = d.conf.r
+
+    canvas.width = canvas.height = d.conf.r * 2
+    d.imgs = []
+
+    for (let len = 3; len < 8; len++) {
+      const perDeg = 360 / len
+      const _r = r / 3
+
+      gd.clearRect(0, 0, canvas.width, canvas.height)
+      gd.save()
+      gd.translate(r, r)
+      gd.beginPath()
+      for (let i = 0; i < len; i++) {
+        const angle = (i * perDeg) / 180 * Math.PI
+        const _angle = (i * perDeg + perDeg / 2) / 180 * Math.PI
+        gd.lineTo(Math.cos(angle) * r, Math.sin(angle) * r)
+        gd.lineTo(Math.cos(_angle) * _r, Math.sin(_angle) * _r)
+      }
+      gd.closePath()
+      gd.fillStyle = randColor()
+      gd.fill()
+      gd.restore()
+
+      const img = new Image()
+      img.src = canvas.toDataURL()
+      d.imgs[len] = img
+
+      document.body.appendChild(img)
+    }
+  }
+  setSize(lenGly) {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+
+    canvas.width = canvas.offsetWidth
+    canvas.height = canvas.offsetHeight
+    d.lenGly = lenGly || d.lenGly || 1000
+    d.data = Array(d.lenGly).fill().map((_, idx) => {
+      const len = rand(3, 6)
+      return {
+        len,
+        x: rand(0, canvas.offsetWidth),
+        y: rand(0, canvas.offsetHeight),
+        vx: rand(-10, 10) / 5,
+        vy: rand(-10, 10) / 5,
+        fillStyle: d.colors[len]
+      }
+    })
+    me[1 ? 'animate' : 'render']()
+  }
+  animate() {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+
+    // me.render()
+    // return
+    const loopRender = () => {
+      me.nextFrame()
+      me.render()
+      d.timerAni = requestAnimationFrame(loopRender)
+    }
+    cancelAnimationFrame(d.timerAni)
+    loopRender()
+  }
+  getRandColor() {
+    const me = this
+    const d = me.d
+
+    return d.colors[rand(0, d.colors.length - 1)]
+  }
+  nextFrame() {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+
+    d.data.forEach((item) => {
+      item.x += item.vx
+      item.y += item.vy
+
+      if (item.x < 0 || item.x > canvas.width) {
+        item.vx = -item.vx
+      }
+
+      if (item.y < 0 || item.y > canvas.height) {
+        item.vy = -item.vy
+      }
+    })
+  }
+  render() {
+    const me = this
+    const d = me.d
+    const {canvas, gd} = d
+
+    const drawGly = () => {
+      d.data.forEach((elItem) => {
+        const img = d.imgs[elItem.len]
+        gd.drawImage(
+          img,
+          elItem.x, elItem.y, img.width, img.height
+        )
+      })
+    }
+
+    gd.clearRect(0, 0, canvas.width, canvas.height)
+    drawGly()
+  }
+}
+
+const gly = new Gly({
+  canvas,
+})
+window.onresize = () => {
+  gly.setSize()
+}
+range.onchange = (e) => {
+  gly.setSize(parseInt(range.value))
+  range.nextElementSibling.innerHTML = range.value
+}
+</script>
+
+</body>
+</html>

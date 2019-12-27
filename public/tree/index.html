@@ -11,16 +11,61 @@
 
     #app {height: 100%;}
     #app canvas {width: 100%; height: 100%; vertical-align: top; background: #000;}
+    #app .control {position: absolute; right: 10px; top: 10px; padding: 10px; background: rgba(255,255,255,.75); border-radius: 4px;}
   </style>
 </head>
 <body>
 
 <div id="app">
   <canvas id="canvas"></canvas>
+  <div class="control">
+    <table>
+      <tr>
+        <td>镜像反转：</td>
+        <td>
+          <input type="checkbox" id="btnFlip">
+        </td>
+      </tr>
+      <tr>
+        <td>镜像反转：</td>
+        <td>
+          <select id="sel">
+            <option value="tb">tb</option>
+            <option value="bt">bt</option>
+            <option value="lr">lr</option>
+            <option value="rl">rl</option>
+          </select>
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
 
-<script src="data.js"></script>
 <script src="TreeView.js"></script>
+<script src="data.js"></script>
+<script>
+// demo 演示
+const treeView = new TreeView({
+  canvas,
+  data, // [{id: 1, pid: 0, name: '公司组织架构图'}]
+  // 镜像反转 默认 false
+  usingFlip: false,
+  // 方向 tb, bt, lr, rl， 默认 tb
+  direction: 'tb',
+  // 排版方式，tree, tree-straight-normal, tree-straight-equal
+  layoutMode: 'tree',
+})
+
+const d = treeView.d
+
+btnFlip.onchange = (e) => {
+  treeView.toggleFlip()
+}
+
+sel.onchange = (e) => {
+  treeView.setDirection(sel.value)
+}
+</script>
 
 </body>
 </html>

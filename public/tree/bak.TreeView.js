@@ -115,70 +115,55 @@ class TreeView {
     translate(node)
   }
   prev(node) {
-    return (this.d.stair[node.depth] || {})[node.hIndex - 1]
+    return this.d.stair[node.depth][node.hIndex - 1]
   }
-  next(node = {}) {
-    return (this.d.stair[node.depth] || {})[node.hIndex + 1]
+  next(node) {
+    return this.d.stair[node.depth][node.hIndex + 1]
   }
   setLayout() {
     const me = this
     const d = me.d
     const {canvas} = d
 
-    for (let depth = d.stair.length - 1; depth > -1; depth--) {
-      const arr = d.stair[depth]
+    const setLayout = (node) => {
+      const children = me.getChildren(node)
+      let nodeL = me.prev(node)
+      let _node = node
 
-      arr.forEach((node, idx, arr) => {
-        const children = me.getChildren(node)
-        let nodeL = arr[idx - 1]
+      children.forEach(setLayout)
+      node.y = node.depth * d.conf.lineHeight
 
-        node.y = depth * d.conf.lineHeight
+      if (children.length > 0) {
+        node.x = (children[0].x + children[children.length - 1].x) / 2
+      } else {
+        node.x = nodeL ? nodeL.x + d.conf.spaceBetween : 0
+      }
 
-        if (idx === 0 && depth < d.maxDepth) {
-          const tmp = d.stair[node.depth + 1]
-          const drNode = tmp[tmp.length - 1]
-          node.x = drNode.x
-        } else {
-          node.x = idx * d.conf.spaceBetween
-        }
+      if (nodeL && node.x - nodeL.x < d.conf.spaceBetween) {
+        me.translate(node, nodeL.x - node.x + d.conf.spaceBetween)
+      }
 
-        if (children.length > 0) {
-          node.x = (children[0].x + children[children.length - 1].x) / 2
-        }
+      if (children.length === 0) return
 
-        if (nodeL && node.x - nodeL.x < d.conf.spaceBetween) {
-          me.translate(node, nodeL.x - node.x + d.conf.spaceBetween)
-        }
-
-        if (children.length === 0) return
-
-        const child = children[children.length - 1]
-        const childR = me.next(child)
-
-        if (childR && childR.x - child.x < d.conf.spaceBetween) {
-          me.translate(d.mapId[childR.pid], child.x - childR.x + d.conf.spaceBetween)
-        }
-
-        let _node = node
-
-        while (nodeL && nodeL.pid === _node.pid) {
-          if (me.getChildren(nodeL).length > 0) {
-            const siblings = d.stair[node.depth]
-            const dis = node.x - nodeL.x
-            const len = node.hIndex - nodeL.hIndex
-            const per = dis / len
-            
-            for (let i = 1; i < len; i++) {
-              siblings[nodeL.hIndex + i].x = i * per + nodeL.x
-            }
-            break
+      while (nodeL && nodeL.pid === _node.pid) {
+        if (me.getChildren(nodeL).length > 0) {
+          const siblings = d.stair[node.depth]
+          const dis = node.x - nodeL.x
+          const len = node.hIndex - nodeL.hIndex
+          const per = dis / len
+          
+          for (let i = 1; i < len; i++) {
+            siblings[nodeL.hIndex + i].x = i * per + nodeL.x
           }
-          _node = nodeL
-          nodeL = me.prev(nodeL)
+          break
         }
-      })
+        nodeL.x = _node.x - d.conf.spaceBetween
+        _node = nodeL
+        nodeL = me.prev(nodeL)
+      }
     }
 
+    setLayout(d.root)
     d.data.forEach((item) => {
       let t
 
@@ -200,7 +185,6 @@ class TreeView {
       }
     })
     me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y - d.maxDepth * d.conf.lineHeight / 2)
-    // me.translate(d.root, d.conf.rect.size.width, d.conf.rect.size.height)
   }
   initEvents() {
     const me = this
@@ -313,7 +297,7 @@ class TreeView {
       me.getChildren(node).forEach(renderNode)
       gd.beginPath()
       gd.rect(node.x - size.width / 2, node.y - size.height / 2, size.width, size.height)
-      gd.fillStyle = 'rgba(128,128,128,.75)'
+      gd.fillStyle = 'rgba(128,128,128,1)'
       gd.fill()
 
       if (1) {
