@@ -1,3 +1,6 @@
+// By 田小号@codding.cn
+// 演示地址 http://codding.cn/tree
+
 class TreeView {
   constructor(d) {
     const me = this
@@ -48,6 +51,7 @@ class TreeView {
       scale: 2,
       lineHeight: 50,
       spaceBetween: 30,
+      duration: 500,
       rect: {
         size: {
           width: 28,
@@ -67,15 +71,15 @@ class TreeView {
     {
       let uniHead = []
 
-      const loopUni = (node) => {
+      const visit = (node) => {
         node.visited = true
-        me.getChildren(node).forEach(loopUni)
+        me.getChildren(node).forEach(visit)
       }
 
       d.data.forEach((node) => {
         if (node.visited) return
         uniHead.push(node)
-        loopUni(node)
+        visit(node)
       })
 
       const renderHead = uniHead.shift()
@@ -88,7 +92,8 @@ class TreeView {
     me.setDepth()
     me.initEvents()
     me.setLayout()
-    me.setPos(d.cx, d.cy)
+    me.setNodesToRoot()
+    me.animate()
   }
   getChildren(node) {
     return this.d.mapPid[(node || {}).id] || []
@@ -131,6 +136,35 @@ class TreeView {
   }
   next(node = {}) {
     return (this.d.stair[node.depth] || {})[node.hIndex + 1]
+  }
+  tween(t, b, c, d) {
+    if ((t /= d / 2) < 1) return c / 2 * t * t + b;
+    return -c / 2 * ((--t) * (t - 2) - 1) + b;
+  }
+  animate() {
+    const me = this
+    const d = me.d
+
+    const loopRender = () => {
+      d.timerAni = requestAnimationFrame(() => {
+        const timeDis = Date.now() - d.timeStart
+        const isStop = timeDis > d.conf.duration
+        const scale = me.tween(timeDis, 0, 1, d.conf.duration)
+
+        d.data.forEach((item) => {
+          item.x = item.from.x + (item.to.x - item.from.x) * scale
+          item.y = item.from.y + (item.to.y - item.from.y) * scale
+        })
+
+        me.render()
+        // isStop ? console.log('stop') : loopRender()
+        !isStop && loopRender()
+      })
+    }
+
+    d.timeStart = Date.now()
+    cancelAnimationFrame(d.timerAni)
+    loopRender()
   }
   setLayout() {
     const me = this
@@ -199,11 +233,16 @@ class TreeView {
       switch (d.direction) {
         case 'bt':
           item.y *= -1
+          item.x *= -1
           break
         case 'lr':
+          t = item.x
+          item.x = item.y
+          item.y = -t
+          break
         case 'rl':
           t = item.x
-          item.x = d.direction === 'lr' ? item.y : -item.y
+          item.x = -item.y
           item.y = t
           break
         default:
@@ -211,7 +250,8 @@ class TreeView {
           break
       }
     })
-    // me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y)
+
+    me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y)
   }
   initEvents() {
     const me = this
@@ -269,6 +309,7 @@ class TreeView {
       d.cx = w / 2
       d.cy = h / 2
 
+      me.setLayout()
       e && me.render()
     }
 
@@ -350,13 +391,16 @@ class TreeView {
     renderNode(d.root)
     gd.restore()
   }
-  setXY(node, x = 0, y = 0) {
-    const setXY = (node) => {
-      node.x = node.from.x = x
-      node.y = node.from.y = y
-      me.getChildren(node).forEach(setXY)
-    }
-    setXY(node)
+  setNodesToRoot() {
+    const me = this
+    const d = me.d
+
+    d.data.forEach((item) => {
+      item.to.x = item.x
+      item.to.y = item.y
+      item.x = item.from.x = d.root.x
+      item.y = item.from.y = d.root.y
+    })
   }
   setPos(x = 0, y = 0) {
     const me = this
@@ -368,22 +412,42 @@ class TreeView {
   toggleFlip() {
     const me = this
     const d = me.d
-    const {x, y} = d.root
+    const posOrigin = d.data.map((item, idx) => {
+      return {
+        x: item.x,
+        y: item.y,
+      }
+    })
 
     d.usingFlip = !d.usingFlip
     me.setLayout()
-    me.setPos(x, y)
-    me.render()
+    d.data.forEach((item, idx) => {
+      item.to.x = item.x
+      item.to.y = item.y
+      item.x = item.from.x = posOrigin[idx].x
+      item.y = item.from.y = posOrigin[idx].y
+    })
+    me.animate()
   }
   setDirection(direction) {
     const me = this
     const d = me.d
-    const {x, y} = d.root
+    const posOrigin = d.data.map((item, idx) => {
+      return {
+        x: item.x,
+        y: item.y,
+      }
+    })
 
     d.direction = direction
     me.setLayout()
-    me.setPos(x, y)
-    me.render()
+    d.data.forEach((item, idx) => {
+      item.to.x = item.x
+      item.to.y = item.y
+      item.x = item.from.x = posOrigin[idx].x
+      item.y = item.from.y = posOrigin[idx].y
+    })
+    me.animate()
   }
   destroy() {
     const me = this

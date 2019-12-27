@@ -27,7 +27,7 @@
         </td>
       </tr>
       <tr>
-        <td>镜像反转：</td>
+        <td>设置方向：</td>
         <td>
           <select id="sel">
             <option value="tb">tb</option>
@@ -40,6 +40,8 @@
     </table>
   </div>
 </div>
+
+<a href="http://codding.cn" style="position: fixed; right: 20px; bottom: 20px; font-size: 12px; color: #09f; text-decoration: none;">By 田小号@codding.cn</a>
 
 <script src="TreeView.js"></script>
 <script src="data.js"></script>
@@ -68,7 +70,25 @@ sel.onchange = (e) => {
 
 // 设置根节点在canvas中的位置
 // treeView.setPos(canvas.offsetWidth / 2 + 200, 50)
-
+document.onkeydown = (e) => {
+  switch (e.keyCode) {
+    case 13:
+      treeView.toggleFlip()
+      break
+    case 37:
+      treeView.setDirection('rl')
+      break
+    case 38:
+      treeView.setDirection('bt')
+      break
+    case 39:
+      treeView.setDirection('lr')
+      break
+    case 40:
+      treeView.setDirection('tb')
+      break
+  }
+}
 </script>
 
 </body>
