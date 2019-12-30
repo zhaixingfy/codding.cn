@@ -1,228 +1,392 @@
-// By 田小号@codding.cn
-// 演示地址 http://codding.cn/tree
+const rand = (min, max) => {
+  return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+Array.prototype.first = function() {
+  return this[0]
+}
+
+Array.prototype.last = function() {
+  return this[this.length - 1]
+}
+
+Array.prototype.swap = function(a, b) {
+  const t = this[a]
+  this[a] = this[b]
+  this[b] = t
+}
+
+Array.prototype.shuffle = function() {
+  for (let i = this.length - 1; i > 0; i--) {
+    this.swap(i, Math.floor(Math.random() * (i + 1)))
+  }
+  return this
+}
 
 class TreeView {
   constructor(d) {
     const me = this
+    const idRepeat = {}
 
     me.d = d
-
-    {
-      if (!d.data || d.data.length === 0) {
-        console.warn('TreeView Warning data 是空的，不绘图')
-        return
-      }
-
-      let idRepeat = {}
-
-      d.data.forEach((node) => {
-        if (node.id === node.pid) {
-          throw new Error('TreeView Error 数据异常 node.id === node.pid，错误的id是：' + node.id)
-        }
-
-        idRepeat[node.id] = idRepeat[node.id] || 0
-        idRepeat[node.id]++
-        node.x = 0
-        node.y = 0
-        node.from = {
-          x: 0,
-          y: 0,
-        }
-        node.to = {
-          x: 0,
-          y: 0,
-        }
-
-        if (idRepeat[node.id] > 1) {
-          throw new Error('TreeView Error 数据异常 id 重复，重复id是：' + node.id)
-        }
-      })
-    }
-
+    d.count = 0
     d.gd = d.canvas.getContext('2d')
-    d.direction = (d.direction || '').toLowerCase()
-    d.scroll = {
-      width: 0,
-      height: 0,
-      left: 0,
-      top: 0,
+
+    // 数据安全监测
+    d.data = d.data || []
+    d.direction = (d.direction || '').toLowerCase().trim()
+    d.mode = (d.mode || '').toLowerCase().trim()
+    d.data.forEach((item) => {
+      idRepeat[item.id] = idRepeat[item.id] || 0
+      idRepeat[item.id]++
+      if (idRepeat[item.id] > 1) throw new Error('id重复，重复的id是 ' + item.id)
+      if (item.id === item.pid) throw new Error('数据错误 id === pid 错误的id是 ' + item.id)
+    })
+
+    try {
+      d.translate = JSON.parse(localStorage.translate)
+    } catch (e) {
+      d.translate = {}
     }
-    d.conf = {
-      scale: 2,
-      lineHeight: 50,
-      spaceBetween: 30,
-      duration: 500,
-      rect: {
-        size: {
-          width: 28,
-          height: 20,
-        }
-      }
-    }
+    d.translate = d.translate || {}
+    d.translate.x = d.translate.x || 0
+    d.translate.y = d.translate.y || 0
+
+    d.conf = d.conf || {}
+    d.conf.rect = d.conf.rect || {}
+    d.conf.rect.size = d.conf.rect.size || {}
+    d.conf.rect.size.width = d.conf.rect.size.width || 26
+    d.conf.rect.size.height = d.conf.rect.size.height || 20
+    d.conf.itemLinkBgColor = d.conf.itemLinkBgColor || 'rgba(128,128,128,1)'
+    d.conf.itemHoverBgColor = d.conf.itemHoverBgColor || '#FF9800'
+    d.conf.itemActiveBgColor = d.conf.itemActiveBgColor || '#FF5722'
+    d.conf.scale = d.conf.scale || 1
+    d.conf.lineHeight = d.conf.lineHeight || 50
+    d.conf.spaceBetween = d.conf.spaceBetween || 2
+    d.conf.itemWidth = d.conf.rect.size.width + d.conf.spaceBetween
+
+    d.scrollBar = d.scrollBar || {}
+    d.scrollBar.size = 15
+
     d.mapId = {}
     d.mapPid = {}
-    d.data.forEach((node) => {
-      d.mapId[node.id] = node
-      d.mapPid[node.pid] = d.mapPid[node.pid] || []
-      d.mapPid[node.pid].push(node)
+    d.data.forEach((item) => {
+      d.mapId[item.id] = item
+      d.mapPid[item.pid] = d.mapPid[item.pid] || []
+      d.mapPid[item.pid].push(item)
     })
-    d.root = d.data[0]
+    d.head = d.mapId[d.headId]
 
     {
-      let uniHead = []
-
-      const visit = (node) => {
-        node.visited = true
-        me.getChildren(node).forEach(visit)
-      }
+      const headNodes = []
 
       d.data.forEach((node) => {
-        if (node.visited) return
-        uniHead.push(node)
-        visit(node)
+        while (node && !node.visited) {
+          node.visited = true
+          const _node = d.mapId[node.pid]
+          if (!_node && !headNodes.includes(node)) {
+            headNodes.push(node)
+            break
+          }
+          node = _node
+        }
       })
+      d.data.forEach((v) => delete v.visited)
+      d.root = headNodes.shift()
 
-      const renderHead = uniHead.shift()
-
-      if (uniHead.length > 0) {
-        console.warn('TreeView Warning 数据存在'+ (uniHead.length + 1) +'棵树。 只绘制根节点为 ' + renderHead.id + ' 的树,  根节点为 ' + uniHead.map(v=>v.id).join(', ') + ' 的树不做绘制')
+      if (headNodes.length > 0) {
+        console.warn('数据存在' + (headNodes.length + 1) + '棵树，只绘制根节点为 ' + d.root.id + ' 的树，根节点为 ' + headNodes.map(v => v.id).join(',') + ' 的树不做绘制')
       }
     }
 
+    me.setPath()
     me.setDepth()
     me.initEvents()
-    me.setLayout()
-    me.setNodesToRoot()
-    me.animate()
   }
-  getChildren(node) {
-    return this.d.mapPid[(node || {}).id] || []
+  setPath() {
+    const me = this
+    const d = me.d
+    let node = d.mapId[d.headId]
+
+    d.path = []
+
+    while (node) {
+      d.path.push(node)
+      node.isMain = true
+      node = d.mapId[node.pid]
+    }
   }
   setDepth() {
     const me = this
     const d = me.d
 
-    const setDepth = (node, depth = 0, idx = 0) => {
+    const setDepth = (node, depth = 0) => {
+      if (!node) return
       node.depth = depth
-      node.index = idx
+      d.maxDepth = Math.max(d.maxDepth, depth + 1)
       d.stair[depth] = d.stair[depth] || []
       node.hIndex = d.stair[depth].length
       d.stair[depth].push(node)
-      d.maxDepth = Math.max(d.maxDepth, depth)
-
-      me.getChildren(node).forEach((item, idx) => {
-        setDepth(item, depth + 1, idx)
+      me.getChildren(node).forEach((item) => {
+        setDepth(item, depth + 1)
       })
     }
 
-    d.stair = []
     d.maxDepth = 0
+    d.stair = []
     setDepth(d.root)
   }
+  getPrev(node) {
+    if (!node) return
+    return this.d.stair[node.depth][node.hIndex - 1]
+  }
+  getNext(node) {
+    if (!node) return
+    return this.d.stair[node.depth][node.hIndex + 1]
+  }
+  getChildren(node) {
+    return this.d.mapPid[(node || {}).id] || []
+  }
+  initEvents() {
+    const me = this
+    const d = me.d
+    const {canvas} = d
+    const size = d.conf.rect.size
+    let x1 = 0
+    let y1 = 0
+    let vx = 0
+    let vy = 0
+    let oldX = 0
+    let oldY = 0
+    let originX = 0
+    let originY = 0
+
+    d.isMouseDown = false
+
+    document.onmousedown = canvas.ontouchstart = (e) => {
+      cancelAnimationFrame(d.timerAni)
+      x1 = (e.touches ? e.touches[0] : e).clientX
+      y1 = (e.touches ? e.touches[0] : e).clientY
+      vx = 0
+      vy = 0
+      oldX = x1
+      oldY = y1
+      originX = d.translate.x
+      originY = d.translate.y
+      d.isMouseDown = true
+      me.render(e)
+    }
+
+    d.fnMove = (e) => {
+      const x2 = (e.touches ? e.touches[0] : e).clientX
+      const y2 = (e.touches ? e.touches[0] : e).clientY
+
+      let x = x2 - x1 + originX
+      let y = y2 - y1 + originY
+
+      if (d.onEl === d.scrollBar) {
+        // 拖拽滚动条
+        const scale = d.w / d.scrollWidth
+        let x = (x1 - x2) / scale + originX
+        let y = (y1 - y2) / scale + originY
+
+        x > 0 && (x = 0)
+        x < (d.w - d.scrollWidth) && (x = d.w - d.scrollWidth)
+
+        y > 0 && (y = 0)
+        y < (d.h - d.scrollHeight) && (y = d.h - d.scrollHeight)
+
+        d.translate.x = x
+      } else if (d.isMouseDown) {
+        x > 0 && (x = 0)
+        x < (d.w - d.scrollWidth) && (x = d.w - d.scrollWidth)
+
+        y > 0 && (y = 0)
+        y < (d.h - d.scrollHeight) && (y = d.h - d.scrollHeight)
+
+        d.translate.x = x
+        // d.translate.y = y
+
+        vx = x2 - oldX
+        vy = y2 - oldY
+        oldX = x2
+        oldY = y2
+      } else {
+        
+      }
+      me.render(e)
+    }
+
+    d.fnUp = (e) => {
+      const x3 = (e.touches ? e.touches[0] : e).clientX
+      const y3 = (e.touches ? e.touches[0] : e).clientY
+
+      d.isMouseDown = false
+      localStorage.translate = JSON.stringify(d.translate)
+
+      if (!d.onEl && Math.abs(vx) > 4) {
+        const loopRender = () => {
+          d.timerAni = requestAnimationFrame(() => {
+            let x, isStop
+
+            vx *= .98
+            x = d.translate.x + vx
+
+            x > 0 && (x = 0)
+            x < (d.w - d.scrollWidth) && (x = d.w - d.scrollWidth)
+
+            isStop = Math.abs(vx) < 1 || x === 0 || x === d.w - d.scrollWidth
+            d.translate.x = x
+
+            me.render()
+            
+            if (isStop) {
+              console.log('stop animate')
+              localStorage.translate = JSON.stringify(d.translate)
+            } else {
+              loopRender()
+            }
+          })
+        }
+        cancelAnimationFrame(d.timerAni)
+        loopRender()
+      }
+
+      delete d.onEl
+      me.render(e)
+    }
+
+    document.addEventListener('mousemove', d.fnMove, false)
+    document.addEventListener('touchmove', d.fnMove, false)
+    document.addEventListener('mouseup', d.fnUp, false)
+    document.addEventListener('touchend', d.fnUp, false)
+
+    me.handleWindowResize = () => {
+      const w = canvas.parentNode.offsetWidth
+      const h = canvas.parentNode.offsetHeight
+
+      d.w = w
+      d.h = h
+      d.cx = w / 2
+      d.cy = h / 2
+
+      // canvas.style.width = w + 'px'
+      // canvas.style.height = h + 'px'
+
+      canvas.width = w * d.conf.scale
+      canvas.height = h * d.conf.scale
+
+      me.setLayout()
+      me.render()
+    }
+    me.handleWindowResize()
+    window.addEventListener('resize', me.handleWindowResize, false)
+  }
+  setPos(x, y) {
+
+  }
+  setPosWithAnimation(x, y) {
+
+  }
   translate(node, x = 0, y = 0) {
-    const me = this
-    const d = me.d
-
-    const translate = (node) => {
-      me.getChildren(node).forEach(translate)
-      node.x += x
-      node.y += y
+    const translate = (item) => {
+      item.x += x
+      item.y += y
+      this.getChildren(item).forEach(translate)
     }
-
     translate(node)
-  }
-  prev(node) {
-    return (this.d.stair[node.depth] || {})[node.hIndex - 1]
-  }
-  next(node = {}) {
-    return (this.d.stair[node.depth] || {})[node.hIndex + 1]
-  }
-  tween(t, b, c, d) {
-    if ((t /= d / 2) < 1) return c / 2 * t * t + b;
-    return -c / 2 * ((--t) * (t - 2) - 1) + b;
-  }
-  animate() {
-    const me = this
-    const d = me.d
-
-    const loopRender = () => {
-      d.timerAni = requestAnimationFrame(() => {
-        const timeDis = Date.now() - d.timeStart
-        const isStop = timeDis > d.conf.duration
-        const scale = me.tween(timeDis, 0, 1, d.conf.duration)
-
-        d.data.forEach((item) => {
-          item.x = item.from.x + (item.to.x - item.from.x) * scale
-          item.y = item.from.y + (item.to.y - item.from.y) * scale
-        })
-
-        me.render()
-        // isStop ? console.log('stop') : loopRender()
-        !isStop && loopRender()
-      })
-    }
-
-    d.timeStart = Date.now()
-    cancelAnimationFrame(d.timerAni)
-    loopRender()
   }
   setLayout() {
     const me = this
     const d = me.d
     const {canvas} = d
 
-    for (let depth = d.stair.length - 1; depth > -1; depth--) {
-      const arr = d.stair[depth]
+    switch (d.mode) {
+      case 'mini':
+        d.stair.forEach((siblings, depth, arr) => {
+          siblings.forEach((item) => {
+            item.x = (item.hIndex - siblings.length / 2) * d.conf.itemWidth
+            item.y = item.depth * d.conf.lineHeight
+          })
+        })
+        break
+      case 'straight-mini':
+        d.stair.forEach((siblings, depth, arr) => {
+          const mainNode = d.path[arr.length - 1 - depth - (d.maxDepth - d.path.length)]
+          const index = mainNode ? mainNode.hIndex : siblings.length / 2
 
-      arr.forEach((node, idx, arr) => {
-        const children = me.getChildren(node)
-        let nodeL = arr[idx - 1]
+          mainNode && (mainNode.x = 0)
 
-        node.y = depth * d.conf.lineHeight
+          siblings.forEach((item) => {
+            item.x = (item.hIndex - index) * d.conf.itemWidth
+            item.y = item.depth * d.conf.lineHeight
+          })
+        })
+        break
+      case 'straight':
+      default:
+        for (let depth = d.stair.length - 1; depth > -1; depth--) {
+          d.stair[depth].forEach((node, idx = 0) => {
+            const children = me.getChildren(node)
 
-        if (idx === 0 && depth < d.maxDepth) {
-          const tmp = d.stair[node.depth + 1]
-          const drNode = tmp[tmp.length - 1]
-          node.x = drNode.x
-        } else {
-          node.x = idx * d.conf.spaceBetween
-        }
+            node.y = node.depth * d.conf.lineHeight
 
-        if (children.length > 0) {
-          node.x = (children[0].x + children[children.length - 1].x) / 2
-        }
-
-        if (nodeL && node.x - nodeL.x < d.conf.spaceBetween) {
-          me.translate(node, nodeL.x - node.x + d.conf.spaceBetween)
-        }
-
-        if (children.length === 0) return
-
-        const child = children[children.length - 1]
-        const childR = me.next(child)
-
-        if (childR && childR.x - child.x < d.conf.spaceBetween) {
-          me.translate(d.mapId[childR.pid], child.x - childR.x + d.conf.spaceBetween)
-        }
-
-        let _node = node
-
-        while (nodeL && nodeL.pid === _node.pid) {
-          if (me.getChildren(nodeL).length > 0) {
-            const siblings = d.stair[node.depth]
-            const dis = node.x - nodeL.x
-            const len = node.hIndex - nodeL.hIndex
-            const per = dis / len
-            
-            for (let i = 1; i < len; i++) {
-              siblings[nodeL.hIndex + i].x = i * per + nodeL.x
+            if (children.length > 0) {
+              node.x = (children[0].x + children[children.length - 1].x) / 2
+            } else if (idx === 0 && depth < d.maxDepth - 1) {
+              node.x = d.stair[depth + 1].last().x
+            } else {
+              const nodeL = me.getPrev(node)
+              node.x = nodeL ? nodeL.x + d.conf.itemWidth : 0
             }
-            break
-          }
-          _node = nodeL
-          nodeL = me.prev(nodeL)
+
+            const arr = []
+            let _node = node
+
+            while (_node) {
+              const nodeL = me.getPrev(_node)
+
+              if (nodeL && _node.x - nodeL.x < d.conf.itemWidth) {
+                arr.push(nodeL.x - _node.x + d.conf.itemWidth)
+              }
+
+              _node = me.getChildren(_node)[0]
+            }
+
+            arr.length > 0 && me.translate(node, Math.max(...arr))
+
+            if (children.length > 0) {
+              let nodeL = me.getPrev(node)
+
+              while (nodeL && nodeL.pid === node.pid) {
+                if (d.mapPid[nodeL.id]) {
+                  const siblings = d.stair[node.depth]
+                  const dis = node.x - nodeL.x
+                  const len = node.hIndex - nodeL.hIndex
+                  const per = dis / len
+
+                  for (let i = 1; i < len; i++) {
+                    siblings[nodeL.hIndex + i].x = nodeL.x + i * per
+                  }
+                  break
+                }
+                nodeL = me.getPrev(nodeL)
+              }
+            }
+          })
         }
-      })
+
+        if (d.mode === 'straight' && d.path.length > 0) {
+          d.path.forEach((node, idx) => {
+            const siblings = d.stair[node.depth]
+            const translateX = d.head.x - node.x
+
+            siblings.forEach((item) => {
+              item.x = (item.hIndex - node.hIndex) * d.conf.itemWidth + d.head.x
+            })
+          })
+        }
+        break
     }
 
     d.data.forEach((item) => {
@@ -251,81 +415,31 @@ class TreeView {
       }
     })
 
-    me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y)
+    d.root && me.translate(d.root, d.cx - d.root.x, d.cy - d.root.y)
+
+    if (d.direction.indexOf('l') > -1) {
+      d.scrollWidth = (d.maxDepth - 1) * d.conf.lineHeight + d.w
+      d.scrollHeight = Math.max(...d.stair.map(arr => Math.abs(arr[0].y - arr.last().y))) + d.h
+    } else {
+      d.scrollHeight = (d.maxDepth - 1) * d.conf.lineHeight + d.w
+      d.scrollWidth = Math.max(...d.stair.map(arr => Math.abs(arr[0].x - arr.last().x))) + d.h
+    }
   }
-  initEvents() {
-    const me = this
-    const d = me.d
-
-    let isMouseDown = false
-    let x1 = 0
-    let y1 = 0
-    let originX = 0
-    let originY = 0
-    let vx = 0
-    let vy = 0
-    let oldX = 0
-    let oldY = 0
-
-    d.canvas.onmousedown = (e) => {
-      x1 = e.offsetX
-      y1 = e.offsetY
-      originX = d.scroll.left
-      originY = d.scroll.top
-      isMouseDown = true
-    }
-
-    d.canvas.onmousemove = (e) => {
-      const x2 = e.offsetX
-      const y2 = e.offsetY
-
-      if (isMouseDown) {
-        d.scroll.left = x2 - x1 + originX
-        d.scroll.top = y2 - y1 + originY
-      } else {
-
-      }
-
-      me.render(e)
-    }
-
-    d.canvas.onmouseup = (e) => {
-      isMouseDown = false
-      me.render(e)
-    }
-
-    me.handleWindowResize = (e) => {
-      const w = canvas.parentNode.offsetWidth
-      const h = canvas.parentNode.offsetHeight
-
-      canvas.width = w * d.conf.scale
-      canvas.height = h * d.conf.scale
-
-      canvas.style.width = w + 'px'
-      canvas.style.height = h + 'px'
-
-      d.w = w
-      d.h = h
-      d.cx = w / 2
-      d.cy = h / 2
-
-      me.setLayout()
-      e && me.render()
-    }
-
-    me.handleWindowResize()
-    window.addEventListener('resize', me.handleWindowResize, false)
-  }
-  render() {
+  render(e) {
     const me = this
     const d = me.d
     const {canvas, gd} = d
     const size = d.conf.rect.size
+    const pos = canvas.getBoundingClientRect()
+    const offsetX = (e ? (e.touches ? e.touches[0] : e).clientX - pos.left : 0) * d.conf.scale
+    const offsetY = (e ? (e.touches ? e.touches[0] : e).clientY - pos.top : 0) * d.conf.scale
+    let _isPointInPath = false
 
     const renderLine = (node) => {
       me.getChildren(node).forEach((item) => {
         renderLine(item)
 
+        const isMain = node.isMain && item.isMain
         const x1 = node.x
         const y1 = node.y
 
@@ -355,109 +469,96 @@ class TreeView {
           x3, y3,
           x4, y4,
         )
-        gd.strokeStyle = 'rgba(128,128,128,1)'
+
+        gd.strokeStyle = isMain ? '#09f' : 'rgba(128,128,128,1)'
+        gd.lineWidth = isMain ? 2 : 1
         gd.stroke()
       })
     }
 
     const renderNode = (node) => {
-      me.getChildren(node).forEach(renderNode)
+      if (!node) return
+
+      const children = me.getChildren(node)
+
+      children.forEach(renderNode)
+
       gd.beginPath()
       gd.rect(node.x - size.width / 2, node.y - size.height / 2, size.width, size.height)
-      gd.fillStyle = 'rgba(128,128,128,.75)'
+      const isPointInPath = e && gd.isPointInPath(offsetX, offsetY)
+      if (isPointInPath) {
+        if (e.type === 'mouseup') {
+          d.click && d.click(e, node)
+        }
+      }
+      _isPointInPath = _isPointInPath || isPointInPath
+      gd.fillStyle = isPointInPath ? d.conf[d.isMouseDown ? 'itemActiveBgColor' : 'itemHoverBgColor'] : d.conf.itemLinkBgColor
       gd.fill()
 
-      if (1) {
-        gd.save()
-        gd.translate(node.x, node.y)
-        gd.font = '12px Arial'
+      if (0) {
+        gd.beginPath()
+        gd.fillStyle = '#fff'
+        gd.font = '14px Arial'
         gd.textAlign = 'center'
         gd.textBaseline = 'middle'
-        gd.fillStyle = '#fff'
-        gd.fillText(node.id, 0, 0)
-        gd.restore()
+        gd.fillText(node.id, node.x, node.y)
       }
     }
 
-    // gd.clearRect(0, 0, canvas.width, canvas.height)
-    gd.beginPath()
     gd.fillStyle = '#000'
     gd.fillRect(0, 0, canvas.width, canvas.height)
 
     gd.save()
     gd.scale(d.conf.scale, d.conf.scale)
-    gd.translate(d.scroll.left, d.scroll.top)
+    gd.translate(d.translate.x, d.translate.y)
     renderLine(d.root)
     renderNode(d.root)
     gd.restore()
-  }
-  setNodesToRoot() {
-    const me = this
-    const d = me.d
 
-    d.data.forEach((item) => {
-      item.to.x = item.x
-      item.to.y = item.y
-      item.x = item.from.x = d.root.x
-      item.y = item.from.y = d.root.y
-    })
-  }
-  setPos(x = 0, y = 0) {
-    const me = this
-    const d = me.d
+    gd.save()
+    gd.scale(d.conf.scale, d.conf.scale)
 
-    me.translate(d.root, x - d.root.x, y - d.root.y)
-    me.render()
-  }
-  toggleFlip() {
-    const me = this
-    const d = me.d
-    const posOrigin = d.data.map((item, idx) => {
-      return {
-        x: item.x,
-        y: item.y,
+    if (d.w < d.scrollWidth) {
+      // 绘制横向滚动条
+      const barW = d.w / d.scrollWidth * d.w
+      const x = d.translate.x / d.scrollWidth * d.w
+      const y = d.h - d.scrollBar.size
+
+      gd.beginPath()
+      gd.rect(0, y, d.w, d.scrollBar.size)
+      gd.fillStyle = 'rgba(128,128,128,.3)'
+      gd.fill()
+
+      gd.beginPath()
+      gd.rect(-x, y, barW, d.scrollBar.size)
+      const isPointInPath = e && gd.isPointInPath(offsetX, offsetY)
+      if (isPointInPath) {
+        if (e.type === 'mousedown') d.onEl = d.scrollBar
       }
-    })
+      _isPointInPath = _isPointInPath || isPointInPath
+      gd.fillStyle = isPointInPath ? 'rgba(128,128,128,.7)' : 'rgba(128,128,128,.5)'
+      gd.fill()
+    }
 
-    d.usingFlip = !d.usingFlip
-    me.setLayout()
-    d.data.forEach((item, idx) => {
-      item.to.x = item.x
-      item.to.y = item.y
-      item.x = item.from.x = posOrigin[idx].x
-      item.y = item.from.y = posOrigin[idx].y
-    })
-    me.animate()
-  }
-  setDirection(direction) {
-    const me = this
-    const d = me.d
-    const posOrigin = d.data.map((item, idx) => {
-      return {
-        x: item.x,
-        y: item.y,
-      }
-    })
+    gd.restore()
 
-    d.direction = direction
-    me.setLayout()
-    d.data.forEach((item, idx) => {
-      item.to.x = item.x
-      item.to.y = item.y
-      item.x = item.from.x = posOrigin[idx].x
-      item.y = item.from.y = posOrigin[idx].y
-    })
-    me.animate()
+    canvas.style.cursor = _isPointInPath ? 'pointer' : 'default'
   }
   destroy() {
     const me = this
     const d = me.d
-    const {canvas} = d
 
     window.removeEventListener('resize', me.handleWindowResize, false)
-    d.canvas.onmousedown = d.canvas.onmousemove = d.canvas.onmouseup = null
 
+    d.canvas.onmousedown = 
+    d.canvas.onmousemove = null
+
+    document.removeEventListener('mousemove', d.fnMove, false)
+    document.removeEventListener('touchmove', d.fnMove, false)
+    document.removeEventListener('mouseup', d.fnUp, false)
+    document.removeEventListener('touchend', d.fnUp, false)
+
+    for (let key in me) delete me[key]
     for (let key in d) delete d[key]
-    for (let key in this) delete this[key]
   }
 }

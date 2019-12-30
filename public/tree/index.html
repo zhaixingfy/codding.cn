@@ -2,93 +2,57 @@
 <html lang="zh-cn">
 <head>
   <meta charset="UTF-8">
-  <title>多叉树排版</title>
+  <meta name="viewport" content="width=device-width, user-scalable=no">
+  <title>多叉树排版 | By田小号@codding.cn</title>
   <link rel="shortcut icon" type="image/x-icon" href="http://codding.cn/static-codding/img/favicon.ico?x">
   <style>
-    * {padding: 0; margin: 0; font: inherit; box-sizing: border-box;}
+    * {padding: 0; margin: 0; font: inherit;}
     html, body {height: 100%;}
-    body {font-size: 14px; overflow: hidden;}
+    body {overflow: hidden;}
 
     #app {height: 100%;}
     #app canvas {width: 100%; height: 100%; vertical-align: top; background: #000;}
-    #app .control {position: absolute; right: 10px; top: 10px; padding: 10px; background: rgba(255,255,255,.75); border-radius: 4px;}
   </style>
 </head>
 <body>
 
 <div id="app">
   <canvas id="canvas"></canvas>
-  <div class="control">
-    <table>
-      <tr>
-        <td>镜像反转：</td>
-        <td>
-          <input type="checkbox" id="btnFlip">
-        </td>
-      </tr>
-      <tr>
-        <td>设置方向：</td>
-        <td>
-          <select id="sel">
-            <option value="tb">tb</option>
-            <option value="lr">lr</option>
-            <option value="bt">bt</option>
-            <option value="rl">rl</option>
-          </select>
-        </td>
-      </tr>
-    </table>
-  </div>
 </div>
 
-<a href="http://codding.cn" style="position: fixed; right: 20px; bottom: 20px; font-size: 12px; color: #09f; text-decoration: none;">By 田小号@codding.cn</a>
-
-<script src="TreeView.js"></script>
-<script src="data.js"></script>
+<script src="./TreeView.js"></script>
+<script src="./data.js"></script>
 <script>
-// demo 演示
 const treeView = new TreeView({
   canvas,
-  data, // [{id: 1, pid: 0, name: '公司组织架构图'}]
-  // 镜像反转 默认 false
-  usingFlip: false,
-  // 方向 tb, bt, lr, rl， 默认 tb
-  direction: 'tb',
-  // 排版方式，tree, tree-straight-normal, tree-straight-equal
-  layoutMode: 'tree',
+  data,
+  headId: 150,
+  // 参数 tree(默认) | mini | straight | straight-mini
+  mode: 'straight',
+  direction: 'lr',
+  translate: {
+    x: 0,
+    y: window.innerHeight / 2,
+  },
+  conf: {
+    // itemHoverBgColor: 'red',
+    // itemActiveBgColor: 'purple',
+    lineHeight: 30,
+    spaceBetween: 8,
+    rect: {
+      size: {
+        width: 10,
+        height: 10,
+      }
+    }
+  },
+  click(e, node) {
+    console.log(node)
+  }
 })
 
 const d = treeView.d
-
-btnFlip.onchange = (e) => {
-  treeView.toggleFlip()
-}
-
-sel.onchange = (e) => {
-  treeView.setDirection(sel.value)
-}
-
-// 设置根节点在canvas中的位置
-// treeView.setPos(canvas.offsetWidth / 2 + 200, 50)
-document.onkeydown = (e) => {
-  switch (e.keyCode) {
-    case 13:
-      treeView.toggleFlip()
-      break
-    case 37:
-      treeView.setDirection('rl')
-      break
-    case 38:
-      treeView.setDirection('bt')
-      break
-    case 39:
-      treeView.setDirection('lr')
-      break
-    case 40:
-      treeView.setDirection('tb')
-      break
-  }
-}
+// treeView.destroy()
 </script>
 
 </body>
