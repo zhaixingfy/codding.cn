@@ -163,7 +163,7 @@ class TreeView {
 
     d.isMouseDown = false
 
-    document.onmousedown = canvas.ontouchstart = (e) => {
+    d.fnDown = (e) => {
       cancelAnimationFrame(d.timerAni)
       x1 = (e.touches ? e.touches[0] : e).clientX
       y1 = (e.touches ? e.touches[0] : e).clientY
@@ -175,6 +175,11 @@ class TreeView {
       originY = d.translate.y
       d.isMouseDown = true
       me.render(e)
+
+      if (!e.touches) {
+        document.onmousemove = d.fnMove
+        document.onmouseup = d.fnUp
+      }
     }
 
     d.fnMove = (e) => {
@@ -256,10 +261,10 @@ class TreeView {
       me.render(e)
     }
 
-    document.addEventListener('mousemove', d.fnMove, false)
-    document.addEventListener('touchmove', d.fnMove, false)
-    document.addEventListener('mouseup', d.fnUp, false)
-    document.addEventListener('touchend', d.fnUp, false)
+    canvas.onmousedown = d.fnDown
+    canvas.ontouchstart = d.fnDown
+    canvas.ontouchmove = d.fnMove
+    canvas.ontouchend = d.fnUp
 
     me.handleWindowResize = () => {
       const w = canvas.parentNode.offsetWidth
@@ -505,8 +510,9 @@ class TreeView {
       }
     }
 
-    gd.fillStyle = '#000'
-    gd.fillRect(0, 0, canvas.width, canvas.height)
+    // gd.fillStyle = '#000'
+    // gd.fillRect(0, 0, canvas.width, canvas.height)
+    gd.clearRect(0, 0, canvas.width, canvas.height)
 
     gd.save()
     gd.scale(d.conf.scale, d.conf.scale)
@@ -550,13 +556,10 @@ class TreeView {
 
     window.removeEventListener('resize', me.handleWindowResize, false)
 
-    d.canvas.onmousedown = 
-    d.canvas.onmousemove = null
-
-    document.removeEventListener('mousemove', d.fnMove, false)
-    document.removeEventListener('touchmove', d.fnMove, false)
-    document.removeEventListener('mouseup', d.fnUp, false)
-    document.removeEventListener('touchend', d.fnUp, false)
+    d.canvas.onmousedown =
+    d.canvas.ontouchstart =
+    d.canvas.ontouchmove =
+    d.canvas.ontouchend = null
 
     for (let key in me) delete me[key]
     for (let key in d) delete d[key]
