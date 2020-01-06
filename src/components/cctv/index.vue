@@ -238,7 +238,7 @@ export default {
     },
     isIndex() {
       const r = this.r
-      return !r.idxChannel && !r.idxAlbum && !r.searchText
+      return [r.idxChannel, r.idxAlbum, r.searchText].every(v => v === undefined)
     },
     searchText() {
       return (this.r.searchText || '').trim()
@@ -342,7 +342,7 @@ export default {
       const vm = me.$root
       const r = me.r
 
-      vm.setRouter({com: r.com, idxChannel: r.idxChannel, idxAlbum: r.idxAlbum, tabCom: elItem.name})
+      vm.setRouter({com: r.com, tabCom: elItem.name})
     },
     playNext(direction) {
       const me = this
