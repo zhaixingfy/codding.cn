@@ -73,7 +73,7 @@
               @submit.prevent="handleSubmitAndFetchVideoList"
             >
               <div class="inner auto-flex">
-                <input type="text" class="form-control" 
+                <input type="search" class="form-control" 
                   placeholder="支持网址搜索..." 
                   @input="fetchSugg($event)"
                   @click.stop="fetchSugg($event, 0)"

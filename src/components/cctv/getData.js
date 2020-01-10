@@ -549,7 +549,14 @@ export default {
               return
             }
 
-            data = JSON.parse(data)
+            try {
+              data = JSON.parse(data)
+            } catch (e) {
+              data = {
+                list: [],
+                total: 0,
+              }
+            }
 
             const list = data.list.map((item) => {
               if (/\/\w{32}-\d+\.\w+$/.test(item.imglink)) {
