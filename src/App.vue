@@ -21,7 +21,7 @@
       </div>
       <div class="gray-title footer" v-if="!$root.setting.is.hideFooter">
         <div class="c">
-          <span>鲁ICP备13010563号-2</span>
+          <a target="_blank" href="http://beian.miit.gov.cn/">鲁ICP备13010563号-2</a>
           <!-- <a target="_blank" href="https://www.bootcss.com/">Bootstrap@3.x</a> -->
         </div>
       </div>
@@ -53,7 +53,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 #app {height: 100%; background: #000;}
 #app > .flex-v {height: 100%;}
 #app .page-wrap-container {overflow: hidden;}

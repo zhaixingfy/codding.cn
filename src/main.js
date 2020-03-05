@@ -1,4 +1,4 @@
-import '@/assets/css/reset.scss'
+import '@/assets/css/reset.less'
 import '@/assets/js/dmAux'
 import '@/assets/js/com'
 

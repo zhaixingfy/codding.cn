@@ -190,14 +190,14 @@ export default {
       cache: {},
       tab: {
         list: [
-          {name: '频道直播'},
-          {name: '官方首页'},
+          // {name: '频道直播'},
           {name: '专题直播'},
+          {name: '官方首页'},
           {name: '4K专区'},
         ],
       },
       channel: {
-        list: require('./channel.json'),
+        list: require('./channel.json?a'),
       },
       video: {
         group: [],
@@ -456,14 +456,14 @@ export default {
     me.sugg.text = vm.router.searchText || ''
     vm.is.loading = true
     setTimeout(() => {
-      $.getJSON('./static-codding/data/channel.json', (data) => {
+      $.getJSON('./static-codding/data/channel.json?a', (data) => {
         me.channel.list = data
         me.getVideoList()
       })
     }, 800)
 
     // me.loadHuya()
-    /*$.getJSON('./static-codding/data/liveChannel.json', (data) => {
+    /*$.getJSON('./static-codding/data/liveChannel.json?a', (data) => {
       const jsonGroup = {}
       data.forEach((item, idx, arr) => {
         jsonGroup[item.title] = jsonGroup[item.title] || []
@@ -483,7 +483,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .cctv {
   font-size: 13px;
   .panel-nav {

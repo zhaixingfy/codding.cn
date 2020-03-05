@@ -39,7 +39,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 #topbar {background: #33373e; color: #c3c6c9; line-height: 40px; padding: 0 5px; white-space: nowrap; overflow: auto; user-select: none;}
 #topbar .logo {padding: 0 10px;}
 #topbar .nav {overflow: visible;}

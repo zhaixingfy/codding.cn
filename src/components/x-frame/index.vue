@@ -11,7 +11,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .x-frame {
   iframe {width: 100%; height: 100%; position: absolute; left: 0; top: 0;}
 }

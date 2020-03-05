@@ -272,7 +272,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 #box-algo {}
 #box-algo > .list {text-align: center; padding: 15px;}
 #box-algo > .list section {margin: 20px 0;}

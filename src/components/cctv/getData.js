@@ -62,12 +62,12 @@ export default {
       })
     }))
 
-    result.splice(1, 0, {
-      "id": "11352975",
-      "title": "【贝爷】史上最强男人",
-      "img": "//live-cover.msstatic.com/huyalive/30765679-2523417602-10837996074740744192-2847699224-10057-A-0-1/20191209174557.jpg?x-oss-process=image/resize,limit_0,m_fill,w_338,h_190/sharpen,80/format,webp/quality,q_90",
-      "m3u8": "https://aldirect.hls.huya.com/backsrc/30765679-2523417602-10837996074740744192-2847699224-10057-A-0-1_1200.m3u8?wsSecret=b63444d74bbb97b5140b580f2e636f3a&wsTime=5dee17f0"
-    })
+    // result.splice(1, 0, {
+    //   "id": "11352975",
+    //   "title": "【贝爷】史上最强男人",
+    //   "img": "//live-cover.msstatic.com/huyalive/30765679-2523417602-10837996074740744192-2847699224-10057-A-0-1/20191209174557.jpg?x-oss-process=image/resize,limit_0,m_fill,w_338,h_190/sharpen,80/format,webp/quality,q_90",
+    //   "m3u8": "https://aldirect.hls.huya.com/backsrc/30765679-2523417602-10837996074740744192-2847699224-10057-A-0-1_1200.m3u8?wsSecret=b63444d74bbb97b5140b580f2e636f3a&wsTime=5dee17f0"
+    // })
 
     console.log('----------------')
     console.log(result.length)
@@ -184,7 +184,7 @@ export default {
           // 加载央视首页
           switch (me.tabCom) {
             case '频道直播':
-              $.getJSON('./static-codding/data/liveChannel.json?t=' + ~~(new Date().getMinutes() / 10), (data) => {
+              $.getJSON('./static-codding/data/liveChannel.json?t=' + Math.random(), (data) => {
                 me.page.total = data.length || 0
                 next([{
                   title: '全部视频：共' + me.page.total + '条',
@@ -196,7 +196,7 @@ export default {
               next(await me.getVideoListByUrl('http://tv.cctv.com/'))
               break
             case '专题直播':
-              $.getJSON('./static-codding/data/liveHuya.json?t=' + ~~(new Date().getMinutes() / 10), (data) => {
+              $.getJSON('./static-codding/data/liveHuya.json?t=' + Math.random(), (data) => {
                 me.page.total = data.length || 0
                 data.forEach((item, idx, arr) => {
                   item.site = 'https://www.huya.com/' + item.id
