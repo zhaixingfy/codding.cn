@@ -18,6 +18,9 @@ export default {
             }
           }))
           isBreak = list.length < 120
+          // result.length = 1
+          // isBreak = true
+          console.log(JSON.stringify(result))
           // console.log('def')
           next()
         })
@@ -42,19 +45,13 @@ export default {
         while (arr.length > 0) {
           const item = arr.shift()
           await new Promise((next) => {
-            $.ajax({
-              method: 'GET',
-              url: 'https://m.huya.com/' + item.id,
-              success(sHtml) {
-                $(sHtml).find('video').each((idx, video) => {
-                  item.m3u8 = video.src
-                })
-                console.log('m3u8 load succ', item.title, arr.length)
-                next()
-              },
-              error() {
-                next()
-              },
+            $.get('https://m.huya.com/' + item.id, (sHtml) => {
+              let videoUrl = sHtml.match(/(?:")[^""]*?\.m3u8\?[^""]*?(?:")/)
+              videoUrl = videoUrl ? videoUrl[0] : ''
+              videoUrl = videoUrl.substring(1, videoUrl.length - 1)
+              item.m3u8 = videoUrl
+              console.log('load succ', JSON.stringify(item))
+              next()
             })
           })
         }
@@ -212,24 +209,38 @@ export default {
               let isBreak = false
               let listResult = []
               
-              while (!isBreak) {
-                await new Promise((next) => {
-                  $.getJSON('http://api.cntv.cn/video/getVideoList4k?serviceId=cctv4k&p=' + (++page) + '&n=30&t=jsonp&cb=?', (data) => {
-                    const list = (data.data || {}).list || []
+              try {
+                const k4 = JSON.parse(localStorage.k4)
+                if (Date.now() - k4.time < 24 * 60 * 60 * 1000) {
+                  listResult = k4.list
+                } else {
+                  throw new Error('Hello')
+                }
+              } catch (e) {
+                while (!isBreak) {
+                  await new Promise((next) => {
+                    $.getJSON('http://api.cntv.cn/video/getVideoList4k?serviceId=cctv4k&p=' + (++page) + '&n=30&t=jsonp&cb=?', (data) => {
+                      const list = (data.data || {}).list || []
 
-                    isBreak = list.length < 30
-                    listResult = listResult.concat(list.map((v) => {
-                      return {
-                        id: '',
-                        img: v.image,
-                        title: v.title,
-                        desc: '',
-                        site: v.url,
-                      }
-                    }))
-
-                    next()
+                      isBreak = list.length < 30
+                      listResult = listResult.concat(list.map((v) => {
+                        return {
+                          id: '',
+                          img: v.image,
+                          title: v.title,
+                          desc: '',
+                          site: v.url,
+                        }
+                      }))
+                      
+                      next()
+                    })
                   })
+                }
+
+                localStorage.k4 = JSON.stringify({
+                  time: Date.now(),
+                  list: listResult,
                 })
               }
 

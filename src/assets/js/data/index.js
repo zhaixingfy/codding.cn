@@ -5,7 +5,7 @@ export default function() {
   const ua = navigator.userAgent
 
   return {
-    apiPrefix: (isLocal ? 'http://192.168.0.7/codding' : '.') + '/api/',
+    apiPrefix: (isLocal ? 'http://192.168.3.20/codding.cn' : '.') + '/api/',
     router: {},
     canvas, gd,
     is: {

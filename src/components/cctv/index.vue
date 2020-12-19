@@ -373,7 +373,7 @@ export default {
       const me = this
       const vm = me.$root
 
-      if (!vm.setting.is.playInSite) {
+      if (!vm.setting.is.playInSite || elItem.site.indexOf('huya.com') > -1) {
         window.open(elItem.site)
         vm.is.loading = false
         return
