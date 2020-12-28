@@ -113,6 +113,8 @@ export default {
               delete item.site
               console.log(item.name, item.id, listAlbum.length)
               next()
+            }).catch(() => {
+              next()
             })
           })
         }
